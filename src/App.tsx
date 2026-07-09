@@ -3,8 +3,9 @@ import './App.css'
 
 type Status = 'idle' | 'loading' | 'done' | 'error'
 
-type Recipe = {
+type RecipeOption = {
   title: string
+  summary: string
   ingredients: string[]
   steps: string[]
 }
@@ -12,7 +13,8 @@ type Recipe = {
 function App() {
   const [ingredients, setIngredients] = useState('')
   const [status, setStatus] = useState<Status>('idle')
-  const [recipe, setRecipe] = useState<Recipe | null>(null)
+  const [recipes, setRecipes] = useState<RecipeOption[]>([])
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
   const abortRef = useRef<AbortController | null>(null)
   const canGenerate = ingredients.trim().length > 0
 
@@ -24,6 +26,7 @@ function App() {
 
   const handleGenerate = async () => {
     setStatus('loading')
+    setSelectedIndex(null)
 
     const controller = new AbortController()
     abortRef.current = controller
@@ -43,8 +46,8 @@ function App() {
 
       if (!response.ok) throw new Error('Request failed')
 
-      const data: Recipe = await response.json()
-      setRecipe(data)
+      const data: { recipes: RecipeOption[] } = await response.json()
+      setRecipes(data.recipes)
       setStatus('done')
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') return
@@ -87,21 +90,38 @@ function App() {
       </button>
 
       <div className="result-box">
-        {status === 'done' && recipe ? (
+        {status === 'done' && selectedIndex !== null ? (
           <div className="recipe-card">
-            <h3>{recipe.title}</h3>
+            <button type="button" className="back-link" onClick={() => setSelectedIndex(null)}>
+              ← Back to options
+            </button>
+            <h3>{recipes[selectedIndex].title}</h3>
             <p className="recipe-label">Ingredients</p>
             <ul>
-              {recipe.ingredients.map((item) => (
+              {recipes[selectedIndex].ingredients.map((item) => (
                 <li key={item}>{item}</li>
               ))}
             </ul>
             <p className="recipe-label">Steps</p>
             <ol>
-              {recipe.steps.map((step) => (
+              {recipes[selectedIndex].steps.map((step) => (
                 <li key={step}>{step}</li>
               ))}
             </ol>
+          </div>
+        ) : status === 'done' && recipes.length > 0 ? (
+          <div className="recipe-options">
+            {recipes.map((option, index) => (
+              <button
+                type="button"
+                key={option.title}
+                className="recipe-option"
+                onClick={() => setSelectedIndex(index)}
+              >
+                <span className="recipe-option-title">{option.title}</span>
+                <span className="recipe-option-summary">{option.summary}</span>
+              </button>
+            ))}
           </div>
         ) : status === 'error' ? (
           <p className="error-message">Something went wrong — please try again.</p>

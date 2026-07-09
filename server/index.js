@@ -18,20 +18,60 @@ const ai = process.env.GEMINI_API_KEY
 const RECIPE_SCHEMA = {
   type: Type.OBJECT,
   properties: {
-    title: { type: Type.STRING },
-    ingredients: { type: Type.ARRAY, items: { type: Type.STRING } },
-    steps: { type: Type.ARRAY, items: { type: Type.STRING } },
+    recipes: {
+      type: Type.ARRAY,
+      minItems: 3,
+      maxItems: 3,
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          title: { type: Type.STRING },
+          summary: { type: Type.STRING },
+          ingredients: { type: Type.ARRAY, items: { type: Type.STRING } },
+          steps: { type: Type.ARRAY, items: { type: Type.STRING } },
+        },
+        required: ['title', 'summary', 'ingredients', 'steps'],
+        propertyOrdering: ['title', 'summary', 'ingredients', 'steps'],
+      },
+    },
   },
-  required: ['title', 'ingredients', 'steps'],
-  propertyOrdering: ['title', 'ingredients', 'steps'],
+  required: ['recipes'],
 }
 
 async function generateRecipe(ingredients) {
   if (!ai) throw new Error('GEMINI_API_KEY is not set')
 
+  const prompt = `You are a recipe assistant.
+
+The user will give you a list of ingredients they already have.
+Generate 3 different recipe options based on those ingredients.
+
+Rules:
+- Use the user's ingredients as the main ingredients.
+- You may add only a few minimal pantry staples if needed, such as salt, pepper, oil, garlic, onion, butter, herbs, or spices.
+- Do not add many extra ingredients.
+- Only add ingredients that are common kitchen staples and clearly necessary for cooking.
+- If a recipe can work without an extra ingredient, do not add it.
+- Make each recipe option meaningfully different in style or flavor if possible.
+- Keep the recipes simple, realistic, and practical.
+
+Return the result as JSON in this exact shape:
+{
+  "recipes": [
+    {
+      "title": "",
+      "summary": "",
+      "ingredients": [],
+      "steps": []
+    }
+  ]
+}
+
+Ingredients: ${ingredients.join(', ')}`
+
   const response = await ai.models.generateContent({
     model: MODEL,
-    contents: `Suggest one simple recipe using some or all of these ingredients: ${ingredients.join(', ')}. Prefer recipes that use as many of the listed ingredients as make sense together.`,
+    contents: prompt,
     config: {
       responseMimeType: 'application/json',
       responseSchema: RECIPE_SCHEMA,
@@ -40,11 +80,7 @@ async function generateRecipe(ingredients) {
 
   const recipe = JSON.parse(response.text)
 
-  if (
-    typeof recipe.title !== 'string' ||
-    !Array.isArray(recipe.ingredients) ||
-    !Array.isArray(recipe.steps)
-  ) {
+  if (!Array.isArray(recipe.recipes) || recipe.recipes.length === 0) {
     throw new Error('Gemini response did not match the expected recipe shape')
   }
 
