@@ -19,6 +19,8 @@ const RECIPE_TAGS = [
   'one-pot',
 ]
 
+const DIFFICULTIES = ['Easy', 'Medium', 'Hard']
+
 type Status = 'idle' | 'loading' | 'done' | 'error'
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 type Tab = 'generate' | 'saved'
@@ -29,9 +31,49 @@ type RecipeOption = {
   ingredients: string[]
   steps: string[]
   tags: string[]
+  cookTime: string
+  servings: string
+  difficulty: string
 }
 
 type SavedRecipe = RecipeOption & { id: string }
+
+function RecipeMeta({ recipe }: { recipe: RecipeOption }) {
+  return (
+    <div className="recipe-meta">
+      <span className="meta-item meta-item-ingredients">
+        <span className="meta-icon" aria-hidden="true">
+          🥕
+        </span>
+        {recipe.ingredients.length} ingredient{recipe.ingredients.length === 1 ? '' : 's'}
+      </span>
+      {recipe.cookTime && (
+        <span className="meta-item meta-item-time">
+          <span className="meta-icon" aria-hidden="true">
+            ⏱️
+          </span>
+          {recipe.cookTime}
+        </span>
+      )}
+      {recipe.servings && (
+        <span className="meta-item meta-item-servings">
+          <span className="meta-icon" aria-hidden="true">
+            🍽️
+          </span>
+          {recipe.servings}
+        </span>
+      )}
+      {recipe.difficulty && (
+        <span className="meta-item meta-item-difficulty">
+          <span className="meta-icon" aria-hidden="true">
+            📊
+          </span>
+          {recipe.difficulty}
+        </span>
+      )}
+    </div>
+  )
+}
 
 function App() {
   const [user, setUser] = useState<User | null>(null)
@@ -57,6 +99,9 @@ function App() {
   const [editIngredients, setEditIngredients] = useState('')
   const [editSteps, setEditSteps] = useState('')
   const [editTags, setEditTags] = useState<string[]>([])
+  const [editCookTime, setEditCookTime] = useState('')
+  const [editServings, setEditServings] = useState('')
+  const [editDifficulty, setEditDifficulty] = useState('')
   const [editSaveStatus, setEditSaveStatus] = useState<SaveStatus>('idle')
   const [deleteStatus, setDeleteStatus] = useState<'idle' | 'deleting' | 'error'>('idle')
 
@@ -99,6 +144,9 @@ function App() {
     setEditIngredients(selectedSavedRecipe.ingredients.join('\n'))
     setEditSteps(selectedSavedRecipe.steps.join('\n'))
     setEditTags(selectedSavedRecipe.tags ?? [])
+    setEditCookTime(selectedSavedRecipe.cookTime ?? '')
+    setEditServings(selectedSavedRecipe.servings ?? '')
+    setEditDifficulty(selectedSavedRecipe.difficulty ?? '')
     setEditSaveStatus('idle')
     setIsEditing(true)
   }
@@ -129,7 +177,15 @@ function App() {
           return response.json()
         })
         .then((data: { recipes: SavedRecipe[] }) => {
-          setSavedRecipes(data.recipes.map((recipe) => ({ ...recipe, tags: recipe.tags ?? [] })))
+          setSavedRecipes(
+            data.recipes.map((recipe) => ({
+              ...recipe,
+              tags: recipe.tags ?? [],
+              cookTime: recipe.cookTime ?? '',
+              servings: recipe.servings ?? '',
+              difficulty: recipe.difficulty ?? '',
+            })),
+          )
           setSavedStatus('done')
         })
         .catch(() => setSavedStatus('error'))
@@ -222,6 +278,9 @@ function App() {
         .map((step) => step.trim())
         .filter(Boolean),
       tags: editTags,
+      cookTime: editCookTime.trim(),
+      servings: editServings.trim(),
+      difficulty: editDifficulty,
     }
 
     try {
@@ -345,6 +404,7 @@ function App() {
                   ← Back to options
                 </button>
                 <h3>{recipes[selectedIndex].title}</h3>
+                <RecipeMeta recipe={recipes[selectedIndex]} />
                 {(recipes[selectedIndex].tags ?? []).length > 0 && (
                   <div className="tag-pills">
                     {(recipes[selectedIndex].tags ?? []).map((tag) => (
@@ -394,6 +454,7 @@ function App() {
                   >
                     <span className="recipe-option-title">{option.title}</span>
                     <span className="recipe-option-summary">{option.summary}</span>
+                    <RecipeMeta recipe={option} />
                     {(option.tags ?? []).length > 0 && (
                       <div className="tag-pills">
                         {(option.tags ?? []).map((tag) => (
@@ -462,6 +523,38 @@ function App() {
                     onChange={(e) => setEditSteps(e.target.value)}
                   />
 
+                  <label htmlFor="edit-cook-time">Cook time</label>
+                  <input
+                    id="edit-cook-time"
+                    type="text"
+                    placeholder="e.g. 25 min"
+                    value={editCookTime}
+                    onChange={(e) => setEditCookTime(e.target.value)}
+                  />
+
+                  <label htmlFor="edit-servings">Servings</label>
+                  <input
+                    id="edit-servings"
+                    type="text"
+                    placeholder="e.g. 4 servings"
+                    value={editServings}
+                    onChange={(e) => setEditServings(e.target.value)}
+                  />
+
+                  <p className="recipe-label">Difficulty</p>
+                  <div className="tag-filters">
+                    {DIFFICULTIES.map((level) => (
+                      <button
+                        type="button"
+                        key={level}
+                        className={editDifficulty === level ? 'tag-filter tag-filter-active' : 'tag-filter'}
+                        onClick={() => setEditDifficulty(level)}
+                      >
+                        {level}
+                      </button>
+                    ))}
+                  </div>
+
                   <p className="recipe-label">Tags</p>
                   <div className="tag-filters">
                     {RECIPE_TAGS.map((tag) => (
@@ -496,6 +589,7 @@ function App() {
               ) : (
                 <>
                   <h3>{selectedSavedRecipe.title}</h3>
+                  <RecipeMeta recipe={selectedSavedRecipe} />
                   {(selectedSavedRecipe.tags ?? []).length > 0 && (
                     <div className="tag-pills">
                       {(selectedSavedRecipe.tags ?? []).map((tag) => (
@@ -580,6 +674,7 @@ function App() {
                     >
                       <span className="recipe-option-title">{option.title}</span>
                       <span className="recipe-option-summary">{option.summary}</span>
+                      <RecipeMeta recipe={option} />
                       {(option.tags ?? []).length > 0 && (
                         <div className="tag-pills">
                           {(option.tags ?? []).map((tag) => (

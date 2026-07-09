@@ -59,6 +59,8 @@ const RECIPE_TAGS = [
   'one-pot',
 ]
 
+const DIFFICULTIES = ['Easy', 'Medium', 'Hard']
+
 const RECIPE_SCHEMA = {
   type: Type.OBJECT,
   properties: {
@@ -74,9 +76,30 @@ const RECIPE_SCHEMA = {
           ingredients: { type: Type.ARRAY, items: { type: Type.STRING } },
           steps: { type: Type.ARRAY, items: { type: Type.STRING } },
           tags: { type: Type.ARRAY, items: { type: Type.STRING, enum: RECIPE_TAGS } },
+          cookTime: { type: Type.STRING },
+          servings: { type: Type.STRING },
+          difficulty: { type: Type.STRING, enum: DIFFICULTIES },
         },
-        required: ['title', 'summary', 'ingredients', 'steps', 'tags'],
-        propertyOrdering: ['title', 'summary', 'ingredients', 'steps', 'tags'],
+        required: [
+          'title',
+          'summary',
+          'ingredients',
+          'steps',
+          'tags',
+          'cookTime',
+          'servings',
+          'difficulty',
+        ],
+        propertyOrdering: [
+          'title',
+          'summary',
+          'ingredients',
+          'steps',
+          'tags',
+          'cookTime',
+          'servings',
+          'difficulty',
+        ],
       },
     },
   },
@@ -102,6 +125,7 @@ Rules:
 - Every ingredient must include a specific quantity or measurement (e.g. "2 cups rice", "1 lb chicken breast", not just "rice" or "chicken").
 - Every step must include specific, actionable detail: exact temperatures (°F and °C), times, and measurements where relevant (e.g. "Bake at 400°F (200°C) for 20 minutes", not "bake until done").
 - For each recipe, assign whichever tags genuinely apply from this exact list only: ${RECIPE_TAGS.join(', ')}. Only include tags that truly fit — it's fine for a recipe to have zero tags.
+- For each recipe, include cookTime as a short string (e.g. "25 min"), servings as a short string (e.g. "4 servings"), and difficulty as exactly one of: ${DIFFICULTIES.join(', ')}.
 
 Return the result as JSON in this exact shape:
 {
@@ -111,7 +135,10 @@ Return the result as JSON in this exact shape:
       "summary": "",
       "ingredients": [],
       "steps": [],
-      "tags": []
+      "tags": [],
+      "cookTime": "",
+      "servings": "",
+      "difficulty": ""
     }
   ]
 }
@@ -160,7 +187,7 @@ app.post('/api/recipe', async (req, res) => {
 })
 
 app.post('/api/recipes', requireAuth, async (req, res) => {
-  const { title, summary, ingredients, steps, tags } = req.body
+  const { title, summary, ingredients, steps, tags, cookTime, servings, difficulty } = req.body
 
   if (
     typeof title !== 'string' ||
@@ -179,6 +206,9 @@ app.post('/api/recipes', requireAuth, async (req, res) => {
       ingredients,
       steps,
       tags: Array.isArray(tags) ? tags : [],
+      cookTime: typeof cookTime === 'string' ? cookTime : '',
+      servings: typeof servings === 'string' ? servings : '',
+      difficulty: typeof difficulty === 'string' ? difficulty : '',
       createdAt: FieldValue.serverTimestamp(),
     })
     res.status(201).json({ ok: true })
@@ -189,7 +219,7 @@ app.post('/api/recipes', requireAuth, async (req, res) => {
 })
 
 app.put('/api/recipes/:id', requireAuth, async (req, res) => {
-  const { title, summary, ingredients, steps, tags } = req.body
+  const { title, summary, ingredients, steps, tags, cookTime, servings, difficulty } = req.body
 
   if (
     typeof title !== 'string' ||
@@ -214,6 +244,9 @@ app.put('/api/recipes/:id', requireAuth, async (req, res) => {
       ingredients,
       steps,
       tags: Array.isArray(tags) ? tags : [],
+      cookTime: typeof cookTime === 'string' ? cookTime : '',
+      servings: typeof servings === 'string' ? servings : '',
+      difficulty: typeof difficulty === 'string' ? difficulty : '',
     })
     res.json({ ok: true })
   } catch (err) {

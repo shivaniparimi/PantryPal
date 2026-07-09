@@ -29,6 +29,7 @@
 
 .text-button {
   font: inherit;
+  font-weight: 700;
   font-size: 14px;
   color: var(--accent);
   background: none;
@@ -48,19 +49,21 @@
 .tabs {
   display: flex;
   gap: 4px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 2px solid var(--border);
 }
 
 .tab {
   font: inherit;
+  font-weight: 700;
   font-size: 15px;
   color: var(--text);
   background: none;
   border: none;
-  border-bottom: 2px solid transparent;
+  border-bottom: 3px solid transparent;
   padding: 8px 4px;
-  margin-bottom: -1px;
+  margin-bottom: -2px;
   cursor: pointer;
+  transition: color 0.15s;
 
   &:hover {
     color: var(--text-h);
@@ -72,8 +75,7 @@
 }
 
 .tab-active {
-  color: var(--text-h);
-  font-weight: 600;
+  color: var(--accent);
   border-bottom-color: var(--accent);
 }
 
@@ -92,23 +94,24 @@
 
   label {
     font-size: 14px;
-    font-weight: 500;
+    font-weight: 700;
     color: var(--text-h);
   }
 
   textarea {
     font: inherit;
     color: var(--text-h);
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 8px;
+    background: var(--card-bg);
+    border: 2px solid var(--border);
+    border-radius: 14px;
     padding: 12px 14px;
     resize: vertical;
     box-sizing: border-box;
+    transition: border-color 0.15s;
 
     &:focus-visible {
-      outline: 2px solid var(--accent);
-      outline-offset: 2px;
+      outline: none;
+      border-color: var(--accent);
     }
   }
 }
@@ -119,17 +122,23 @@
   justify-content: center;
   gap: 8px;
   font: inherit;
-  font-weight: 500;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 17px;
   color: #fff;
   background: var(--accent);
   border: none;
-  border-radius: 8px;
-  padding: 12px 20px;
+  border-radius: 999px;
+  padding: 13px 22px;
   cursor: pointer;
-  transition: opacity 0.2s;
+  box-shadow: var(--shadow);
+  transition: transform 0.15s, box-shadow 0.15s;
 
   &:hover:not(:disabled) {
-    opacity: 0.9;
+    transform: translateY(-2px);
+  }
+  &:active:not(:disabled) {
+    transform: translateY(0);
   }
   &:focus-visible {
     outline: 2px solid var(--accent);
@@ -138,6 +147,7 @@
   &:disabled {
     opacity: 0.4;
     cursor: not-allowed;
+    box-shadow: none;
   }
 }
 
@@ -157,10 +167,10 @@
 }
 
 .result-box {
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--code-bg);
-  padding: 20px;
+  border: 2px solid var(--border);
+  border-radius: 18px;
+  background: var(--card-bg);
+  padding: 22px;
   color: var(--text);
 }
 
@@ -168,18 +178,20 @@
   text-align: left;
 
   h3 {
-    margin: 0 0 12px;
-    font-size: 18px;
+    font-family: var(--display);
+    font-weight: 600;
+    margin: 0 0 8px;
+    font-size: 20px;
     color: var(--text-h);
   }
 
   .recipe-label {
     font-size: 13px;
-    font-weight: 600;
+    font-weight: 800;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--text-h);
-    margin: 16px 0 4px;
+    letter-spacing: 0.05em;
+    color: var(--accent);
+    margin: 18px 0 6px;
   }
 
   ul,
@@ -189,31 +201,33 @@
   }
 
   li {
-    margin: 4px 0;
+    margin: 5px 0;
   }
 }
 
 .recipe-options {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
 .recipe-option {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   text-align: left;
   font: inherit;
   color: var(--text-h);
   background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 12px 14px;
+  border: 2px solid var(--border);
+  border-radius: 16px;
+  padding: 14px 16px;
   cursor: pointer;
-  transition: border-color 0.2s;
+  box-shadow: var(--shadow);
+  transition: transform 0.15s, border-color 0.15s;
 
   &:hover {
+    transform: translateY(-3px) rotate(-0.3deg);
     border-color: var(--accent-border);
   }
   &:focus-visible {
@@ -223,12 +237,56 @@
 }
 
 .recipe-option-title {
+  font-family: var(--display);
   font-weight: 600;
+  font-size: 16px;
 }
 
 .recipe-option-summary {
   font-size: 14px;
   color: var(--text);
+}
+
+.recipe-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 2px 0;
+}
+
+.meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-h);
+  background: var(--accent-bg);
+  border-radius: 999px;
+  padding: 3px 10px 3px 6px;
+}
+
+.meta-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  font-size: 12px;
+  border-radius: 50%;
+  background: var(--bg);
+}
+
+.meta-item-time {
+  background: var(--basil-bg);
+}
+
+.meta-item-servings {
+  background: var(--lemon-bg);
+}
+
+.meta-item-difficulty {
+  background: var(--accent-bg);
 }
 
 .tag-pills {
@@ -240,8 +298,9 @@
 
 .tag-pill {
   font-size: 12px;
-  color: var(--accent);
-  background: var(--accent-bg);
+  font-weight: 700;
+  color: var(--basil);
+  background: var(--basil-bg);
   border-radius: 999px;
   padding: 2px 10px;
 }
@@ -257,14 +316,15 @@
   font: inherit;
   color: var(--text-h);
   background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 10px 14px;
+  border: 2px solid var(--border);
+  border-radius: 999px;
+  padding: 10px 16px;
   box-sizing: border-box;
+  transition: border-color 0.15s;
 
   &:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
+    outline: none;
+    border-color: var(--accent);
   }
 }
 
@@ -276,14 +336,15 @@
 
 .tag-filter {
   font: inherit;
+  font-weight: 700;
   font-size: 13px;
   color: var(--text);
   background: var(--bg);
-  border: 1px solid var(--border);
+  border: 2px solid var(--border);
   border-radius: 999px;
   padding: 4px 12px;
   cursor: pointer;
-  transition: border-color 0.2s, color 0.2s;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
 
   &:hover {
     border-color: var(--accent-border);
@@ -297,12 +358,13 @@
 .tag-filter-active {
   color: var(--accent);
   background: var(--accent-bg);
-  border-color: var(--accent-border);
+  border-color: var(--accent);
 }
 
 .back-link {
   display: inline-block;
   font: inherit;
+  font-weight: 700;
   font-size: 14px;
   color: var(--accent);
   background: none;
@@ -325,18 +387,18 @@
   align-items: center;
   justify-content: center;
   font: inherit;
-  font-weight: 500;
+  font-weight: 700;
   color: var(--accent);
   background: var(--accent-bg);
-  border: 1px solid var(--accent-border);
-  border-radius: 8px;
-  padding: 8px 16px;
+  border: 2px solid var(--accent-border);
+  border-radius: 999px;
+  padding: 8px 18px;
   margin-top: 16px;
   cursor: pointer;
-  transition: opacity 0.2s;
+  transition: transform 0.15s;
 
   &:hover:not(:disabled) {
-    opacity: 0.8;
+    transform: translateY(-2px);
   }
   &:focus-visible {
     outline: 2px solid var(--accent);
@@ -345,6 +407,7 @@
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+    transform: none;
   }
 }
 
@@ -366,10 +429,10 @@
 
   label {
     font-size: 13px;
-    font-weight: 600;
+    font-weight: 800;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--text-h);
+    letter-spacing: 0.05em;
+    color: var(--accent);
     margin-top: 12px;
   }
 
@@ -378,15 +441,16 @@
     font: inherit;
     color: var(--text-h);
     background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 8px;
+    border: 2px solid var(--border);
+    border-radius: 12px;
     padding: 10px 12px;
     resize: vertical;
     box-sizing: border-box;
+    transition: border-color 0.15s;
 
     &:focus-visible {
-      outline: 2px solid var(--accent);
-      outline-offset: 2px;
+      outline: none;
+      border-color: var(--accent);
     }
   }
 
@@ -411,20 +475,20 @@
   align-items: center;
   justify-content: center;
   font: inherit;
-  font-weight: 500;
-  color: #b91c1c;
+  font-weight: 700;
+  color: #c23b22;
   background: none;
-  border: 1px solid #b91c1c;
-  border-radius: 8px;
-  padding: 8px 16px;
+  border: 2px solid #c23b22;
+  border-radius: 999px;
+  padding: 8px 18px;
   cursor: pointer;
-  transition: opacity 0.2s;
+  transition: opacity 0.15s;
 
   &:hover:not(:disabled) {
-    opacity: 0.8;
+    opacity: 0.75;
   }
   &:focus-visible {
-    outline: 2px solid #b91c1c;
+    outline: 2px solid #c23b22;
     outline-offset: 2px;
   }
   &:disabled {
@@ -435,17 +499,18 @@
 
 @media (prefers-color-scheme: dark) {
   .delete-button {
-    color: #f87171;
-    border-color: #f87171;
+    color: #ff8a75;
+    border-color: #ff8a75;
   }
 }
 
 .error-message {
-  color: #b91c1c;
+  color: #c23b22;
+  font-weight: 700;
 }
 
 @media (prefers-color-scheme: dark) {
   .error-message {
-    color: #f87171;
+    color: #ff8a75;
   }
 }
