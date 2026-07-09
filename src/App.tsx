@@ -51,6 +51,15 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedTags, setSelectedTags] = useState<string[]>([])
 
+  const [isEditing, setIsEditing] = useState(false)
+  const [editTitle, setEditTitle] = useState('')
+  const [editSummary, setEditSummary] = useState('')
+  const [editIngredients, setEditIngredients] = useState('')
+  const [editSteps, setEditSteps] = useState('')
+  const [editTags, setEditTags] = useState<string[]>([])
+  const [editSaveStatus, setEditSaveStatus] = useState<SaveStatus>('idle')
+  const [deleteStatus, setDeleteStatus] = useState<'idle' | 'deleting' | 'error'>('idle')
+
   const filteredSavedRecipes = savedRecipes.filter((recipe) => {
     const query = searchQuery.trim().toLowerCase()
     const matchesQuery =
@@ -69,6 +78,29 @@ function App() {
     setSelectedTags((current) =>
       current.includes(tag) ? current.filter((t) => t !== tag) : [...current, tag],
     )
+  }
+
+  const selectSavedRecipe = (id: string | null) => {
+    setSavedSelectedId(id)
+    setIsEditing(false)
+    setDeleteStatus('idle')
+  }
+
+  const toggleEditTag = (tag: string) => {
+    setEditTags((current) =>
+      current.includes(tag) ? current.filter((t) => t !== tag) : [...current, tag],
+    )
+  }
+
+  const startEditing = () => {
+    if (!selectedSavedRecipe) return
+    setEditTitle(selectedSavedRecipe.title)
+    setEditSummary(selectedSavedRecipe.summary)
+    setEditIngredients(selectedSavedRecipe.ingredients.join('\n'))
+    setEditSteps(selectedSavedRecipe.steps.join('\n'))
+    setEditTags(selectedSavedRecipe.tags ?? [])
+    setEditSaveStatus('idle')
+    setIsEditing(true)
   }
 
   useEffect(() => {
@@ -97,7 +129,7 @@ function App() {
           return response.json()
         })
         .then((data: { recipes: SavedRecipe[] }) => {
-          setSavedRecipes(data.recipes)
+          setSavedRecipes(data.recipes.map((recipe) => ({ ...recipe, tags: recipe.tags ?? [] })))
           setSavedStatus('done')
         })
         .catch(() => setSavedStatus('error'))
@@ -171,6 +203,71 @@ function App() {
   const selectGeneratedRecipe = (index: number | null) => {
     setSelectedIndex(index)
     setSaveStatus('idle')
+  }
+
+  const handleSaveEdit = async () => {
+    if (!user || !selectedSavedRecipe) return
+
+    setEditSaveStatus('saving')
+
+    const updated = {
+      title: editTitle.trim(),
+      summary: editSummary.trim(),
+      ingredients: editIngredients
+        .split('\n')
+        .map((item) => item.trim())
+        .filter(Boolean),
+      steps: editSteps
+        .split('\n')
+        .map((step) => step.trim())
+        .filter(Boolean),
+      tags: editTags,
+    }
+
+    try {
+      const idToken = await user.getIdToken()
+      const response = await fetch(`${API_URL}/api/recipes/${selectedSavedRecipe.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify(updated),
+      })
+
+      if (!response.ok) throw new Error('Request failed')
+
+      setSavedRecipes((current) =>
+        current.map((recipe) => (recipe.id === selectedSavedRecipe.id ? { ...recipe, ...updated } : recipe)),
+      )
+      setIsEditing(false)
+      setEditSaveStatus('idle')
+    } catch {
+      setEditSaveStatus('error')
+    }
+  }
+
+  const handleDeleteRecipe = async () => {
+    if (!user || !selectedSavedRecipe) return
+    if (!window.confirm(`Delete "${selectedSavedRecipe.title}"? This can't be undone.`)) return
+
+    setDeleteStatus('deleting')
+
+    try {
+      const idToken = await user.getIdToken()
+      const response = await fetch(`${API_URL}/api/recipes/${selectedSavedRecipe.id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${idToken}` },
+      })
+
+      if (!response.ok) throw new Error('Request failed')
+
+      setSavedRecipes((current) => current.filter((recipe) => recipe.id !== selectedSavedRecipe.id))
+      setSavedSelectedId(null)
+      setDeleteStatus('idle')
+    } catch {
+      setDeleteStatus('error')
+    }
   }
 
   return (
@@ -248,9 +345,9 @@ function App() {
                   ← Back to options
                 </button>
                 <h3>{recipes[selectedIndex].title}</h3>
-                {recipes[selectedIndex].tags.length > 0 && (
+                {(recipes[selectedIndex].tags ?? []).length > 0 && (
                   <div className="tag-pills">
-                    {recipes[selectedIndex].tags.map((tag) => (
+                    {(recipes[selectedIndex].tags ?? []).map((tag) => (
                       <span key={tag} className="tag-pill">
                         {tag}
                       </span>
@@ -297,9 +394,9 @@ function App() {
                   >
                     <span className="recipe-option-title">{option.title}</span>
                     <span className="recipe-option-summary">{option.summary}</span>
-                    {option.tags.length > 0 && (
+                    {(option.tags ?? []).length > 0 && (
                       <div className="tag-pills">
-                        {option.tags.map((tag) => (
+                        {(option.tags ?? []).map((tag) => (
                           <span key={tag} className="tag-pill">
                             {tag}
                           </span>
@@ -327,31 +424,118 @@ function App() {
             </div>
           ) : selectedSavedRecipe ? (
             <div className="recipe-card">
-              <button type="button" className="back-link" onClick={() => setSavedSelectedId(null)}>
+              <button type="button" className="back-link" onClick={() => selectSavedRecipe(null)}>
                 ← Back to My Recipes
               </button>
-              <h3>{selectedSavedRecipe.title}</h3>
-              {selectedSavedRecipe.tags.length > 0 && (
-                <div className="tag-pills">
-                  {selectedSavedRecipe.tags.map((tag) => (
-                    <span key={tag} className="tag-pill">
-                      {tag}
-                    </span>
-                  ))}
+
+              {isEditing ? (
+                <div className="edit-form">
+                  <label htmlFor="edit-title">Title</label>
+                  <input
+                    id="edit-title"
+                    type="text"
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                  />
+
+                  <label htmlFor="edit-summary">Summary</label>
+                  <input
+                    id="edit-summary"
+                    type="text"
+                    value={editSummary}
+                    onChange={(e) => setEditSummary(e.target.value)}
+                  />
+
+                  <label htmlFor="edit-ingredients">Ingredients (one per line)</label>
+                  <textarea
+                    id="edit-ingredients"
+                    rows={5}
+                    value={editIngredients}
+                    onChange={(e) => setEditIngredients(e.target.value)}
+                  />
+
+                  <label htmlFor="edit-steps">Steps (one per line)</label>
+                  <textarea
+                    id="edit-steps"
+                    rows={6}
+                    value={editSteps}
+                    onChange={(e) => setEditSteps(e.target.value)}
+                  />
+
+                  <p className="recipe-label">Tags</p>
+                  <div className="tag-filters">
+                    {RECIPE_TAGS.map((tag) => (
+                      <button
+                        type="button"
+                        key={tag}
+                        className={editTags.includes(tag) ? 'tag-filter tag-filter-active' : 'tag-filter'}
+                        onClick={() => toggleEditTag(tag)}
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="edit-actions">
+                    <button
+                      type="button"
+                      className="save-button"
+                      disabled={editSaveStatus === 'saving'}
+                      onClick={handleSaveEdit}
+                    >
+                      {editSaveStatus === 'saving' ? 'Saving...' : 'Save Changes'}
+                    </button>
+                    <button type="button" className="text-button" onClick={() => setIsEditing(false)}>
+                      Cancel
+                    </button>
+                  </div>
+                  {editSaveStatus === 'error' && (
+                    <p className="error-message">Could not save — please try again.</p>
+                  )}
                 </div>
+              ) : (
+                <>
+                  <h3>{selectedSavedRecipe.title}</h3>
+                  {(selectedSavedRecipe.tags ?? []).length > 0 && (
+                    <div className="tag-pills">
+                      {(selectedSavedRecipe.tags ?? []).map((tag) => (
+                        <span key={tag} className="tag-pill">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <p className="recipe-label">Ingredients</p>
+                  <ul>
+                    {selectedSavedRecipe.ingredients.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                  <p className="recipe-label">Steps</p>
+                  <ol>
+                    {selectedSavedRecipe.steps.map((step) => (
+                      <li key={step}>{step}</li>
+                    ))}
+                  </ol>
+
+                  <div className="recipe-card-actions">
+                    <button type="button" className="save-button" onClick={startEditing}>
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      className="delete-button"
+                      disabled={deleteStatus === 'deleting'}
+                      onClick={handleDeleteRecipe}
+                    >
+                      {deleteStatus === 'deleting' ? 'Deleting...' : 'Delete'}
+                    </button>
+                  </div>
+                  {deleteStatus === 'error' && (
+                    <p className="error-message">Could not delete — please try again.</p>
+                  )}
+                </>
               )}
-              <p className="recipe-label">Ingredients</p>
-              <ul>
-                {selectedSavedRecipe.ingredients.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-              <p className="recipe-label">Steps</p>
-              <ol>
-                {selectedSavedRecipe.steps.map((step) => (
-                  <li key={step}>{step}</li>
-                ))}
-              </ol>
             </div>
           ) : savedStatus === 'loading' ? (
             <p>Loading your recipes...</p>
@@ -392,13 +576,13 @@ function App() {
                       type="button"
                       key={option.id}
                       className="recipe-option"
-                      onClick={() => setSavedSelectedId(option.id)}
+                      onClick={() => selectSavedRecipe(option.id)}
                     >
                       <span className="recipe-option-title">{option.title}</span>
                       <span className="recipe-option-summary">{option.summary}</span>
-                      {option.tags.length > 0 && (
+                      {(option.tags ?? []).length > 0 && (
                         <div className="tag-pills">
-                          {option.tags.map((tag) => (
+                          {(option.tags ?? []).map((tag) => (
                             <span key={tag} className="tag-pill">
                               {tag}
                             </span>

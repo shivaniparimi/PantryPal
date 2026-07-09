@@ -188,6 +188,57 @@ app.post('/api/recipes', requireAuth, async (req, res) => {
   }
 })
 
+app.put('/api/recipes/:id', requireAuth, async (req, res) => {
+  const { title, summary, ingredients, steps, tags } = req.body
+
+  if (
+    typeof title !== 'string' ||
+    typeof summary !== 'string' ||
+    !Array.isArray(ingredients) ||
+    !Array.isArray(steps)
+  ) {
+    return res.status(400).json({ error: 'title, summary, ingredients, and steps are required' })
+  }
+
+  try {
+    const docRef = db.collection('recipes').doc(req.params.id)
+    const doc = await docRef.get()
+
+    if (!doc.exists || doc.data().userId !== req.user.uid) {
+      return res.status(404).json({ error: 'Recipe not found' })
+    }
+
+    await docRef.update({
+      title,
+      summary,
+      ingredients,
+      steps,
+      tags: Array.isArray(tags) ? tags : [],
+    })
+    res.json({ ok: true })
+  } catch (err) {
+    console.error('Updating recipe failed:', err.message)
+    res.status(500).json({ error: 'Could not update recipe' })
+  }
+})
+
+app.delete('/api/recipes/:id', requireAuth, async (req, res) => {
+  try {
+    const docRef = db.collection('recipes').doc(req.params.id)
+    const doc = await docRef.get()
+
+    if (!doc.exists || doc.data().userId !== req.user.uid) {
+      return res.status(404).json({ error: 'Recipe not found' })
+    }
+
+    await docRef.delete()
+    res.json({ ok: true })
+  } catch (err) {
+    console.error('Deleting recipe failed:', err.message)
+    res.status(500).json({ error: 'Could not delete recipe' })
+  }
+})
+
 app.get('/api/recipes', requireAuth, async (req, res) => {
   try {
     const snapshot = await db

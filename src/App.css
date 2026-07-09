@@ -348,6 +348,98 @@
   }
 }
 
+.recipe-card-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.recipe-card-actions .save-button {
+  margin-top: 0;
+}
+
+.edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+
+  label {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-h);
+    margin-top: 12px;
+  }
+
+  input,
+  textarea {
+    font: inherit;
+    color: var(--text-h);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    resize: vertical;
+    box-sizing: border-box;
+
+    &:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+  }
+
+  .tag-filters {
+    margin-top: 4px;
+  }
+}
+
+.edit-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.edit-actions .save-button {
+  margin-top: 0;
+}
+
+.delete-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font: inherit;
+  font-weight: 500;
+  color: #b91c1c;
+  background: none;
+  border: 1px solid #b91c1c;
+  border-radius: 8px;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+
+  &:hover:not(:disabled) {
+    opacity: 0.8;
+  }
+  &:focus-visible {
+    outline: 2px solid #b91c1c;
+    outline-offset: 2px;
+  }
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .delete-button {
+    color: #f87171;
+    border-color: #f87171;
+  }
+}
+
 .error-message {
   color: #b91c1c;
 }
