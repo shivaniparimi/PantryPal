@@ -122,3 +122,13 @@
     margin: 4px 0;
   }
 }
+
+.error-message {
+  color: #b91c1c;
+}
+
+@media (prefers-color-scheme: dark) {
+  .error-message {
+    color: #f87171;
+  }
+}

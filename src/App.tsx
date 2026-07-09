@@ -1,39 +1,55 @@
 import { useEffect, useRef, useState } from 'react'
 import './App.css'
 
-type Status = 'idle' | 'loading' | 'done'
+type Status = 'idle' | 'loading' | 'done' | 'error'
 
-const MOCK_STEPS = [
-  'Prep and combine your ingredients.',
-  'Cook everything together over medium heat until done.',
-  'Season to taste and plate up.',
-  'Enjoy your meal!',
-]
+type Recipe = {
+  title: string
+  ingredients: string[]
+  steps: string[]
+}
 
 function App() {
   const [ingredients, setIngredients] = useState('')
   const [status, setStatus] = useState<Status>('idle')
-  const [recipeIngredients, setRecipeIngredients] = useState<string[]>([])
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [recipe, setRecipe] = useState<Recipe | null>(null)
+  const abortRef = useRef<AbortController | null>(null)
   const canGenerate = ingredients.trim().length > 0
 
   useEffect(() => {
     return () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+      abortRef.current?.abort()
     }
   }, [])
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     setStatus('loading')
-    timeoutRef.current = setTimeout(() => {
-      setRecipeIngredients(
-        ingredients
-          .split(',')
-          .map((item) => item.trim())
-          .filter(Boolean),
-      )
+
+    const controller = new AbortController()
+    abortRef.current = controller
+
+    try {
+      const response = await fetch('/api/recipe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ingredients: ingredients
+            .split(',')
+            .map((item) => item.trim())
+            .filter(Boolean),
+        }),
+        signal: controller.signal,
+      })
+
+      if (!response.ok) throw new Error('Request failed')
+
+      const data: Recipe = await response.json()
+      setRecipe(data)
       setStatus('done')
-    }, 1200)
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') return
+      setStatus('error')
+    }
   }
 
   return (
@@ -71,22 +87,24 @@ function App() {
       </button>
 
       <div className="result-box">
-        {status === 'done' ? (
+        {status === 'done' && recipe ? (
           <div className="recipe-card">
-            <h3>Your Pantry Recipe</h3>
+            <h3>{recipe.title}</h3>
             <p className="recipe-label">Ingredients</p>
             <ul>
-              {recipeIngredients.map((item) => (
+              {recipe.ingredients.map((item) => (
                 <li key={item}>{item}</li>
               ))}
             </ul>
             <p className="recipe-label">Steps</p>
             <ol>
-              {MOCK_STEPS.map((step) => (
+              {recipe.steps.map((step) => (
                 <li key={step}>{step}</li>
               ))}
             </ol>
           </div>
+        ) : status === 'error' ? (
+          <p className="error-message">Something went wrong — please try again.</p>
         ) : (
           <p>Your recipe will appear here.</p>
         )}
