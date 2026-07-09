@@ -38,6 +38,38 @@ type RecipeOption = {
 
 type SavedRecipe = RecipeOption & { id: string }
 
+function ChefMascot() {
+  return (
+    <svg className="mascot" viewBox="0 0 100 100" width="72" height="72" aria-hidden="true">
+      <g className="mascot-steam">
+        <path className="steam-puff steam-puff-1" d="M32,20 Q35,14 32,8 Q29,2 32,-4" />
+        <path className="steam-puff steam-puff-2" d="M50,16 Q53,10 50,4 Q47,-2 50,-8" />
+        <path className="steam-puff steam-puff-3" d="M68,20 Q71,14 68,8 Q65,2 68,-4" />
+      </g>
+
+      <path
+        className="mascot-hat"
+        d="M20,52 C14,28 38,16 50,21 C62,16 86,28 80,52 C80,52 68,57 50,57 C32,57 20,52 20,52 Z"
+      />
+      <rect className="mascot-band" x="27" y="50" width="46" height="19" rx="9.5" />
+
+      <circle className="mascot-eye" cx="41" cy="59" r="2.6" />
+      <circle className="mascot-eye" cx="59" cy="59" r="2.6" />
+      <ellipse className="mascot-cheek" cx="36" cy="64" rx="4" ry="2.4" />
+      <ellipse className="mascot-cheek" cx="64" cy="64" rx="4" ry="2.4" />
+      <path className="mascot-smile" d="M43,63.5 Q50,69 57,63.5" />
+
+      <ellipse className="mascot-bowl-rim" cx="50" cy="80" rx="30" ry="7" />
+      <path className="mascot-bowl-body" d="M21,80 Q23,96 50,97 Q77,96 79,80 Z" />
+
+      <g className="mascot-spoon" transform="rotate(24 74 68)">
+        <rect x="72" y="46" width="4" height="30" rx="2" />
+        <ellipse cx="74" cy="43" rx="6" ry="8" />
+      </g>
+    </svg>
+  )
+}
+
 function RecipeMeta({ recipe }: { recipe: RecipeOption }) {
   return (
     <div className="recipe-meta">
@@ -346,7 +378,10 @@ function App() {
         )}
       </div>
 
-      <h1>PantryPal</h1>
+      <div className="hero">
+        <ChefMascot />
+        <h1>PantryPal</h1>
+      </div>
       <p className="subtitle">
         Tell us what's leftover in your kitchen and we'll suggest a recipe to help clean out your pantry!
       </p>
@@ -383,15 +418,15 @@ function App() {
 
           <button
             type="button"
-            className="generate"
+            className={canGenerate && status !== 'loading' ? 'generate generate-pulse' : 'generate'}
             disabled={!canGenerate || status === 'loading'}
             onClick={handleGenerate}
           >
             {status === 'loading' ? (
-              <>
+              <span className="generate-loading">
                 <span className="spinner" aria-hidden="true" />
                 Generating...
-              </>
+              </span>
             ) : (
               'Generate Recipe'
             )}

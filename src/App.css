@@ -14,6 +14,150 @@
   margin: -8px 0 0;
 }
 
+.hero {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  h1 {
+    margin: 0;
+  }
+}
+
+.mascot {
+  flex-shrink: 0;
+  overflow: visible;
+  transform: translateY(4px);
+}
+
+.mascot-hat,
+.mascot-band {
+  fill: var(--card-bg);
+  stroke: var(--text-h);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+}
+
+.mascot-eye {
+  fill: var(--text-h);
+  transform-origin: center;
+  transform-box: fill-box;
+}
+
+.mascot-cheek {
+  fill: var(--accent);
+  opacity: 0.45;
+}
+
+.mascot-smile {
+  fill: none;
+  stroke: var(--text-h);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.mascot-bowl-rim {
+  fill: var(--accent-bg);
+  stroke: var(--text-h);
+  stroke-width: 2.5;
+}
+
+.mascot-bowl-body {
+  fill: var(--card-bg);
+  stroke: var(--text-h);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+}
+
+.mascot-spoon rect,
+.mascot-spoon ellipse {
+  fill: var(--accent);
+}
+
+.steam-puff {
+  fill: none;
+  stroke: var(--basil);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .mascot {
+    animation: mascot-float 3.2s ease-in-out infinite;
+  }
+
+  .mascot:hover {
+    animation: mascot-wiggle 0.5s ease-in-out;
+  }
+
+  .mascot-eye {
+    animation: mascot-blink 4.5s ease-in-out infinite;
+  }
+
+  .steam-puff-1 {
+    animation: steam-rise 3s ease-in infinite;
+  }
+  .steam-puff-2 {
+    animation: steam-rise 3s ease-in infinite 1s;
+  }
+  .steam-puff-3 {
+    animation: steam-rise 3s ease-in infinite 2s;
+  }
+}
+
+@keyframes mascot-float {
+  0%,
+  100% {
+    transform: translateY(4px);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes mascot-wiggle {
+  0%,
+  100% {
+    transform: translateY(4px) rotate(0deg);
+  }
+  25% {
+    transform: translateY(4px) rotate(-6deg);
+  }
+  75% {
+    transform: translateY(4px) rotate(6deg);
+  }
+}
+
+@keyframes mascot-blink {
+  0%,
+  90%,
+  100% {
+    transform: scaleY(1);
+  }
+  95% {
+    transform: scaleY(0.1);
+  }
+}
+
+@keyframes steam-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(6px) scale(0.8);
+  }
+  20% {
+    opacity: 0.7;
+  }
+  80% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-10px) scale(1.1);
+  }
+}
+
 .topbar {
   display: flex;
   justify-content: flex-end;
@@ -148,6 +292,34 @@
     opacity: 0.4;
     cursor: not-allowed;
     box-shadow: none;
+  }
+}
+
+.generate-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .generate-pulse {
+    animation: generate-pulse 2.6s ease-in-out infinite;
+  }
+  .generate-pulse:hover {
+    animation-play-state: paused;
+  }
+  .generate-loading {
+    animation: pop-in 0.25s ease-out;
+  }
+}
+
+@keyframes generate-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.015);
   }
 }
 
@@ -303,6 +475,57 @@
   background: var(--basil-bg);
   border-radius: 999px;
   padding: 2px 10px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .recipe-card {
+    animation: card-in 0.3s ease-out;
+  }
+
+  .recipe-option {
+    opacity: 0;
+    animation: card-in 0.3s ease-out forwards;
+  }
+  .recipe-option:nth-child(1) {
+    animation-delay: 0.03s;
+  }
+  .recipe-option:nth-child(2) {
+    animation-delay: 0.09s;
+  }
+  .recipe-option:nth-child(3) {
+    animation-delay: 0.15s;
+  }
+
+  .meta-item,
+  .tag-pill {
+    transition: transform 0.15s;
+  }
+  .meta-item:hover,
+  .tag-pill:hover {
+    transform: scale(1.08) rotate(-2deg);
+  }
+}
+
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .saved-filters {
