@@ -45,6 +45,20 @@ async function requireAuth(req, res, next) {
   }
 }
 
+const RECIPE_TAGS = [
+  'breakfast',
+  'lunch',
+  'dinner',
+  'snack',
+  'dessert',
+  'vegan',
+  'vegetarian',
+  'gluten-free',
+  'dairy-free',
+  'quick',
+  'one-pot',
+]
+
 const RECIPE_SCHEMA = {
   type: Type.OBJECT,
   properties: {
@@ -59,9 +73,10 @@ const RECIPE_SCHEMA = {
           summary: { type: Type.STRING },
           ingredients: { type: Type.ARRAY, items: { type: Type.STRING } },
           steps: { type: Type.ARRAY, items: { type: Type.STRING } },
+          tags: { type: Type.ARRAY, items: { type: Type.STRING, enum: RECIPE_TAGS } },
         },
-        required: ['title', 'summary', 'ingredients', 'steps'],
-        propertyOrdering: ['title', 'summary', 'ingredients', 'steps'],
+        required: ['title', 'summary', 'ingredients', 'steps', 'tags'],
+        propertyOrdering: ['title', 'summary', 'ingredients', 'steps', 'tags'],
       },
     },
   },
@@ -86,6 +101,7 @@ Rules:
 - Keep the recipes simple, realistic, and practical.
 - Every ingredient must include a specific quantity or measurement (e.g. "2 cups rice", "1 lb chicken breast", not just "rice" or "chicken").
 - Every step must include specific, actionable detail: exact temperatures (°F and °C), times, and measurements where relevant (e.g. "Bake at 400°F (200°C) for 20 minutes", not "bake until done").
+- For each recipe, assign whichever tags genuinely apply from this exact list only: ${RECIPE_TAGS.join(', ')}. Only include tags that truly fit — it's fine for a recipe to have zero tags.
 
 Return the result as JSON in this exact shape:
 {
@@ -94,7 +110,8 @@ Return the result as JSON in this exact shape:
       "title": "",
       "summary": "",
       "ingredients": [],
-      "steps": []
+      "steps": [],
+      "tags": []
     }
   ]
 }
@@ -143,7 +160,7 @@ app.post('/api/recipe', async (req, res) => {
 })
 
 app.post('/api/recipes', requireAuth, async (req, res) => {
-  const { title, summary, ingredients, steps } = req.body
+  const { title, summary, ingredients, steps, tags } = req.body
 
   if (
     typeof title !== 'string' ||
@@ -161,6 +178,7 @@ app.post('/api/recipes', requireAuth, async (req, res) => {
       summary,
       ingredients,
       steps,
+      tags: Array.isArray(tags) ? tags : [],
       createdAt: FieldValue.serverTimestamp(),
     })
     res.status(201).json({ ok: true })

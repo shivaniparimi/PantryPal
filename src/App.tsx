@@ -5,6 +5,20 @@ import './App.css'
 
 const API_URL = import.meta.env.VITE_API_URL ?? ''
 
+const RECIPE_TAGS = [
+  'breakfast',
+  'lunch',
+  'dinner',
+  'snack',
+  'dessert',
+  'vegan',
+  'vegetarian',
+  'gluten-free',
+  'dairy-free',
+  'quick',
+  'one-pot',
+]
+
 type Status = 'idle' | 'loading' | 'done' | 'error'
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 type Tab = 'generate' | 'saved'
@@ -14,6 +28,7 @@ type RecipeOption = {
   summary: string
   ingredients: string[]
   steps: string[]
+  tags: string[]
 }
 
 type SavedRecipe = RecipeOption & { id: string }
@@ -32,7 +47,29 @@ function App() {
 
   const [savedRecipes, setSavedRecipes] = useState<SavedRecipe[]>([])
   const [savedStatus, setSavedStatus] = useState<Status>('idle')
-  const [savedSelectedIndex, setSavedSelectedIndex] = useState<number | null>(null)
+  const [savedSelectedId, setSavedSelectedId] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedTags, setSelectedTags] = useState<string[]>([])
+
+  const filteredSavedRecipes = savedRecipes.filter((recipe) => {
+    const query = searchQuery.trim().toLowerCase()
+    const matchesQuery =
+      query.length === 0 ||
+      recipe.title.toLowerCase().includes(query) ||
+      recipe.ingredients.some((item) => item.toLowerCase().includes(query))
+
+    const matchesTags = selectedTags.every((tag) => (recipe.tags ?? []).includes(tag))
+
+    return matchesQuery && matchesTags
+  })
+
+  const selectedSavedRecipe = savedRecipes.find((recipe) => recipe.id === savedSelectedId) ?? null
+
+  const toggleTag = (tag: string) => {
+    setSelectedTags((current) =>
+      current.includes(tag) ? current.filter((t) => t !== tag) : [...current, tag],
+    )
+  }
 
   useEffect(() => {
     if (!auth) return
@@ -49,7 +86,7 @@ function App() {
     if (tab !== 'saved' || !user) return
 
     setSavedStatus('loading')
-    setSavedSelectedIndex(null)
+    setSavedSelectedId(null)
 
     user.getIdToken().then((idToken) => {
       fetch(`${API_URL}/api/recipes`, {
@@ -211,6 +248,15 @@ function App() {
                   ← Back to options
                 </button>
                 <h3>{recipes[selectedIndex].title}</h3>
+                {recipes[selectedIndex].tags.length > 0 && (
+                  <div className="tag-pills">
+                    {recipes[selectedIndex].tags.map((tag) => (
+                      <span key={tag} className="tag-pill">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
                 <p className="recipe-label">Ingredients</p>
                 <ul>
                   {recipes[selectedIndex].ingredients.map((item) => (
@@ -251,6 +297,15 @@ function App() {
                   >
                     <span className="recipe-option-title">{option.title}</span>
                     <span className="recipe-option-summary">{option.summary}</span>
+                    {option.tags.length > 0 && (
+                      <div className="tag-pills">
+                        {option.tags.map((tag) => (
+                          <span key={tag} className="tag-pill">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </button>
                 ))}
               </div>
@@ -270,21 +325,30 @@ function App() {
                 Sign in with Google
               </button>
             </div>
-          ) : savedSelectedIndex !== null ? (
+          ) : selectedSavedRecipe ? (
             <div className="recipe-card">
-              <button type="button" className="back-link" onClick={() => setSavedSelectedIndex(null)}>
+              <button type="button" className="back-link" onClick={() => setSavedSelectedId(null)}>
                 ← Back to My Recipes
               </button>
-              <h3>{savedRecipes[savedSelectedIndex].title}</h3>
+              <h3>{selectedSavedRecipe.title}</h3>
+              {selectedSavedRecipe.tags.length > 0 && (
+                <div className="tag-pills">
+                  {selectedSavedRecipe.tags.map((tag) => (
+                    <span key={tag} className="tag-pill">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
               <p className="recipe-label">Ingredients</p>
               <ul>
-                {savedRecipes[savedSelectedIndex].ingredients.map((item) => (
+                {selectedSavedRecipe.ingredients.map((item) => (
                   <li key={item}>{item}</li>
                 ))}
               </ul>
               <p className="recipe-label">Steps</p>
               <ol>
-                {savedRecipes[savedSelectedIndex].steps.map((step) => (
+                {selectedSavedRecipe.steps.map((step) => (
                   <li key={step}>{step}</li>
                 ))}
               </ol>
@@ -296,19 +360,56 @@ function App() {
           ) : savedRecipes.length === 0 ? (
             <p>You haven't saved any recipes yet.</p>
           ) : (
-            <div className="recipe-options">
-              {savedRecipes.map((option, index) => (
-                <button
-                  type="button"
-                  key={option.id}
-                  className="recipe-option"
-                  onClick={() => setSavedSelectedIndex(index)}
-                >
-                  <span className="recipe-option-title">{option.title}</span>
-                  <span className="recipe-option-summary">{option.summary}</span>
-                </button>
-              ))}
-            </div>
+            <>
+              <div className="saved-filters">
+                <input
+                  type="search"
+                  className="search-input"
+                  placeholder="Search by title or ingredient"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                <div className="tag-filters">
+                  {RECIPE_TAGS.map((tag) => (
+                    <button
+                      type="button"
+                      key={tag}
+                      className={selectedTags.includes(tag) ? 'tag-filter tag-filter-active' : 'tag-filter'}
+                      onClick={() => toggleTag(tag)}
+                    >
+                      {tag}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {filteredSavedRecipes.length === 0 ? (
+                <p>No saved recipes match your search or filters.</p>
+              ) : (
+                <div className="recipe-options">
+                  {filteredSavedRecipes.map((option) => (
+                    <button
+                      type="button"
+                      key={option.id}
+                      className="recipe-option"
+                      onClick={() => setSavedSelectedId(option.id)}
+                    >
+                      <span className="recipe-option-title">{option.title}</span>
+                      <span className="recipe-option-summary">{option.summary}</span>
+                      {option.tags.length > 0 && (
+                        <div className="tag-pills">
+                          {option.tags.map((tag) => (
+                            <span key={tag} className="tag-pill">
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
