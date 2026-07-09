@@ -9,7 +9,7 @@ const { GoogleGenAI, Type } = require('@google/genai')
 
 const app = express()
 const PORT = process.env.PORT || 3001
-const MODEL = 'gemini-2.5-flash'
+const MODEL = 'gemini-2.5-flash-lite'
 
 const ai = process.env.GEMINI_API_KEY
   ? new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
