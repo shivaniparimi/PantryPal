@@ -44,6 +44,10 @@
 }
 
 .generate {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   font: inherit;
   font-weight: 500;
   color: #fff;
@@ -67,10 +71,54 @@
   }
 }
 
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .result-box {
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--code-bg);
   padding: 20px;
   color: var(--text);
+}
+
+.recipe-card {
+  text-align: left;
+
+  h3 {
+    margin: 0 0 12px;
+    font-size: 18px;
+    color: var(--text-h);
+  }
+
+  .recipe-label {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-h);
+    margin: 16px 0 4px;
+  }
+
+  ul,
+  ol {
+    margin: 0;
+    padding-left: 20px;
+  }
+
+  li {
+    margin: 4px 0;
+  }
 }
