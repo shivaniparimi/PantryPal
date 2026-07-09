@@ -6,6 +6,9 @@ try {
 
 const express = require('express')
 const cors = require('cors')
+const { initializeApp, cert, getApps } = require('firebase-admin/app')
+const { getAuth } = require('firebase-admin/auth')
+const { getFirestore, FieldValue } = require('firebase-admin/firestore')
 const { GoogleGenAI, Type } = require('@google/genai')
 
 const app = express()
@@ -15,6 +18,32 @@ const MODEL = 'gemini-2.5-flash-lite'
 const ai = process.env.GEMINI_API_KEY
   ? new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
   : null
+
+if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+  initializeApp({
+    credential: cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY)),
+  })
+}
+
+const db = getApps().length ? getFirestore() : null
+
+async function requireAuth(req, res, next) {
+  const authHeader = req.headers.authorization || ''
+  const idToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null
+
+  if (!idToken || !getApps().length) {
+    return res.status(401).json({ error: 'Sign-in required' })
+  }
+
+  try {
+    const decoded = await getAuth().verifyIdToken(idToken)
+    req.user = { uid: decoded.uid, email: decoded.email, name: decoded.name }
+    next()
+  } catch (err) {
+    console.error('Token verification failed:', err.message)
+    res.status(401).json({ error: 'Sign-in required' })
+  }
+}
 
 const RECIPE_SCHEMA = {
   type: Type.OBJECT,
@@ -110,6 +139,50 @@ app.post('/api/recipe', async (req, res) => {
   } catch (err) {
     console.error('Gemini recipe generation failed:', err.message)
     res.status(502).json({ error: 'Recipe generation failed' })
+  }
+})
+
+app.post('/api/recipes', requireAuth, async (req, res) => {
+  const { title, summary, ingredients, steps } = req.body
+
+  if (
+    typeof title !== 'string' ||
+    typeof summary !== 'string' ||
+    !Array.isArray(ingredients) ||
+    !Array.isArray(steps)
+  ) {
+    return res.status(400).json({ error: 'title, summary, ingredients, and steps are required' })
+  }
+
+  try {
+    await db.collection('recipes').add({
+      userId: req.user.uid,
+      title,
+      summary,
+      ingredients,
+      steps,
+      createdAt: FieldValue.serverTimestamp(),
+    })
+    res.status(201).json({ ok: true })
+  } catch (err) {
+    console.error('Saving recipe failed:', err.message)
+    res.status(500).json({ error: 'Could not save recipe' })
+  }
+})
+
+app.get('/api/recipes', requireAuth, async (req, res) => {
+  try {
+    const snapshot = await db
+      .collection('recipes')
+      .where('userId', '==', req.user.uid)
+      .orderBy('createdAt', 'desc')
+      .get()
+
+    const recipes = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+    res.json({ recipes })
+  } catch (err) {
+    console.error('Fetching recipes failed:', err.message)
+    res.status(500).json({ error: 'Could not fetch recipes' })
   }
 })
 
