@@ -54,6 +54,8 @@ Rules:
 - If a recipe can work without an extra ingredient, do not add it.
 - Make each recipe option meaningfully different in style or flavor if possible.
 - Keep the recipes simple, realistic, and practical.
+- Every ingredient must include a specific quantity or measurement (e.g. "2 cups rice", "1 lb chicken breast", not just "rice" or "chicken").
+- Every step must include specific, actionable detail: exact temperatures (°F and °C), times, and measurements where relevant (e.g. "Bake at 400°F (200°C) for 20 minutes", not "bake until done").
 
 Return the result as JSON in this exact shape:
 {
