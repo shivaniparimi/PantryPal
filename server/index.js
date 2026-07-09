@@ -5,6 +5,7 @@ try {
 }
 
 const express = require('express')
+const cors = require('cors')
 const { GoogleGenAI, Type } = require('@google/genai')
 
 const app = express()
@@ -89,7 +90,12 @@ Ingredients: ${ingredients.join(', ')}`
   return recipe
 }
 
+app.use(cors({ origin: process.env.ALLOWED_ORIGIN || '*' }))
 app.use(express.json())
+
+app.get('/', (req, res) => {
+  res.send('PantryPal API is running')
+})
 
 app.post('/api/recipe', async (req, res) => {
   const { ingredients } = req.body
