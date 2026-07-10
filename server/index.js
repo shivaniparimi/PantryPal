@@ -106,8 +106,12 @@ const RECIPE_SCHEMA = {
   required: ['recipes'],
 }
 
-async function generateRecipe(ingredients) {
+async function generateRecipe(ingredients, maxCookTime) {
   if (!ai) throw new Error('GEMINI_API_KEY is not set')
+
+  const timeRule = maxCookTime
+    ? `\n- Every recipe must be cookable in under ${maxCookTime} minutes total, including prep time. Do not exceed this.`
+    : ''
 
   const prompt = `You are a recipe assistant.
 
@@ -125,7 +129,7 @@ Rules:
 - Every ingredient must include a specific quantity or measurement (e.g. "2 cups rice", "1 lb chicken breast", not just "rice" or "chicken").
 - Every step must include specific, actionable detail: exact temperatures (°F and °C), times, and measurements where relevant (e.g. "Bake at 400°F (200°C) for 20 minutes", not "bake until done").
 - For each recipe, assign whichever tags genuinely apply from this exact list only: ${RECIPE_TAGS.join(', ')}. Only include tags that truly fit — it's fine for a recipe to have zero tags.
-- For each recipe, include cookTime as a short string (e.g. "25 min"), servings as a short string (e.g. "4 servings"), and difficulty as exactly one of: ${DIFFICULTIES.join(', ')}.
+- For each recipe, include cookTime as a short string (e.g. "25 min"), servings as a short string (e.g. "4 servings"), and difficulty as exactly one of: ${DIFFICULTIES.join(', ')}.${timeRule}
 
 Return the result as JSON in this exact shape:
 {
@@ -171,14 +175,19 @@ app.get('/', (req, res) => {
 })
 
 app.post('/api/recipe', async (req, res) => {
-  const { ingredients } = req.body
+  const { ingredients, maxCookTime } = req.body
 
   if (!Array.isArray(ingredients) || ingredients.length === 0) {
     return res.status(400).json({ error: 'ingredients must be a non-empty array' })
   }
 
+  const parsedMaxCookTime =
+    typeof maxCookTime === 'number' && Number.isFinite(maxCookTime) && maxCookTime > 0
+      ? maxCookTime
+      : undefined
+
   try {
-    const recipe = await generateRecipe(ingredients)
+    const recipe = await generateRecipe(ingredients, parsedMaxCookTime)
     res.json(recipe)
   } catch (err) {
     console.error('Gemini recipe generation failed:', err.message)

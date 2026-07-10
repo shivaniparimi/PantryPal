@@ -20,6 +20,7 @@ const RECIPE_TAGS = [
 ]
 
 const DIFFICULTIES = ['Easy', 'Medium', 'Hard']
+const TIME_PRESETS = [15, 30, 45, 60]
 
 type Status = 'idle' | 'loading' | 'done' | 'error'
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
@@ -255,6 +256,8 @@ function App() {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
   const [adjustedServings, setAdjustedServings] = useState<number | null>(null)
+  const [maxCookTimeEnabled, setMaxCookTimeEnabled] = useState(false)
+  const [maxCookTime, setMaxCookTime] = useState(30)
   const abortRef = useRef<AbortController | null>(null)
   const canGenerate = ingredients.trim().length > 0
 
@@ -403,6 +406,7 @@ function App() {
             .split(',')
             .map((item) => item.trim())
             .filter(Boolean),
+          ...(maxCookTimeEnabled ? { maxCookTime } : {}),
         }),
         signal: controller.signal,
       })
@@ -571,6 +575,38 @@ function App() {
               value={ingredients}
               onChange={(e) => setIngredients(e.target.value)}
             />
+          </div>
+
+          <div className="time-filter">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={maxCookTimeEnabled}
+              className="toggle-row"
+              onClick={() => setMaxCookTimeEnabled((current) => !current)}
+            >
+              <span className={maxCookTimeEnabled ? 'toggle-switch toggle-switch-on' : 'toggle-switch'}>
+                <span className="toggle-knob" />
+              </span>
+              <span className="toggle-label">
+                {maxCookTimeEnabled ? `Cook in under ${maxCookTime} min` : 'Cook in under X minutes'}
+              </span>
+            </button>
+
+            {maxCookTimeEnabled && (
+              <div className="time-presets">
+                {TIME_PRESETS.map((minutes) => (
+                  <button
+                    type="button"
+                    key={minutes}
+                    className={maxCookTime === minutes ? 'serving-preset serving-preset-active' : 'serving-preset'}
+                    onClick={() => setMaxCookTime(minutes)}
+                  >
+                    {minutes}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <button
