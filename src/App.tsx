@@ -754,7 +754,6 @@ function App() {
               ref={fileInputRef}
               type="file"
               accept="image/*"
-              capture="environment"
               className="scan-file-input"
               onChange={(e) => {
                 const file = e.target.files?.[0]
