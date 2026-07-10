@@ -22,8 +22,12 @@ const RECIPE_TAGS = [
 const DIFFICULTIES = ['Easy', 'Medium', 'Hard']
 const TIME_PRESETS = [15, 30, 45, 60]
 
+const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif']
+const MAX_IMAGE_SIZE = 8 * 1024 * 1024
+
 type Status = 'idle' | 'loading' | 'done' | 'error'
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
+type ScanStatus = 'idle' | 'scanning' | 'reviewing' | 'error'
 type Tab = 'generate' | 'saved'
 
 type RecipeOption = {
@@ -209,6 +213,83 @@ function ServingAdjuster({ value, onChange }: { value: number; onChange: (n: num
   )
 }
 
+function ScannedIngredientsEditor({
+  ingredients,
+  onChange,
+  onConfirm,
+  onCancel,
+}: {
+  ingredients: string[]
+  onChange: (list: string[]) => void
+  onConfirm: () => void
+  onCancel: () => void
+}) {
+  const [draft, setDraft] = useState('')
+
+  const updateItem = (index: number, value: string) => {
+    onChange(ingredients.map((item, i) => (i === index ? value : item)))
+  }
+
+  const removeItem = (index: number) => {
+    onChange(ingredients.filter((_, i) => i !== index))
+  }
+
+  const addItem = () => {
+    const trimmed = draft.trim()
+    if (!trimmed) return
+    onChange([...ingredients, trimmed])
+    setDraft('')
+  }
+
+  return (
+    <div className="scan-review">
+      <p className="recipe-label">
+        {ingredients.length === 0 ? 'No ingredients detected — add some below' : 'Detected ingredients'}
+      </p>
+      <div className="scan-ingredient-list">
+        {ingredients.map((item, index) => (
+          <div className="scan-ingredient-row" key={index}>
+            <input type="text" value={item} onChange={(e) => updateItem(index, e.target.value)} />
+            <button
+              type="button"
+              className="scan-remove-button"
+              onClick={() => removeItem(index)}
+              aria-label={`Remove ${item || 'ingredient'}`}
+            >
+              ×
+            </button>
+          </div>
+        ))}
+      </div>
+      <div className="scan-add-row">
+        <input
+          type="text"
+          placeholder="Add an ingredient"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault()
+              addItem()
+            }
+          }}
+        />
+        <button type="button" className="serving-preset" onClick={addItem} aria-label="Add ingredient">
+          +
+        </button>
+      </div>
+      <div className="edit-actions">
+        <button type="button" className="save-button" disabled={ingredients.length === 0} onClick={onConfirm}>
+          Confirm & Generate
+        </button>
+        <button type="button" className="text-button" onClick={onCancel}>
+          Cancel
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function RecipeMeta({ recipe }: { recipe: RecipeOption }) {
   return (
     <div className="recipe-meta">
@@ -258,7 +339,11 @@ function App() {
   const [adjustedServings, setAdjustedServings] = useState<number | null>(null)
   const [maxCookTimeEnabled, setMaxCookTimeEnabled] = useState(false)
   const [maxCookTime, setMaxCookTime] = useState(30)
+  const [scanStatus, setScanStatus] = useState<ScanStatus>('idle')
+  const [scannedIngredients, setScannedIngredients] = useState<string[]>([])
+  const [scanErrorMessage, setScanErrorMessage] = useState('')
   const abortRef = useRef<AbortController | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const canGenerate = ingredients.trim().length > 0
 
   const [savedRecipes, setSavedRecipes] = useState<SavedRecipe[]>([])
@@ -390,7 +475,7 @@ function App() {
     signOut(auth)
   }
 
-  const handleGenerate = async () => {
+  const runGenerate = async (ingredientList: string[]) => {
     setStatus('loading')
     setSelectedIndex(null)
 
@@ -402,10 +487,7 @@ function App() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ingredients: ingredients
-            .split(',')
-            .map((item) => item.trim())
-            .filter(Boolean),
+          ingredients: ingredientList,
           ...(maxCookTimeEnabled ? { maxCookTime } : {}),
         }),
         signal: controller.signal,
@@ -420,6 +502,67 @@ function App() {
       if (err instanceof Error && err.name === 'AbortError') return
       setStatus('error')
     }
+  }
+
+  const handleGenerate = () => {
+    runGenerate(
+      ingredients
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean),
+    )
+  }
+
+  const handleImageSelected = async (file: File) => {
+    if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+      setScanErrorMessage('Unsupported image type — try a JPEG, PNG, WEBP, or HEIC photo.')
+      setScanStatus('error')
+      return
+    }
+
+    if (file.size > MAX_IMAGE_SIZE) {
+      setScanErrorMessage('That image is too large — try a photo under 8MB.')
+      setScanStatus('error')
+      return
+    }
+
+    setScanStatus('scanning')
+
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve((reader.result as string).split(',')[1] ?? '')
+        reader.onerror = () => reject(new Error('Could not read file'))
+        reader.readAsDataURL(file)
+      })
+
+      const response = await fetch(`${API_URL}/api/scan-fridge`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageBase64: base64, mimeType: file.type }),
+      })
+
+      if (!response.ok) throw new Error('Request failed')
+
+      const data: { ingredients: string[] } = await response.json()
+      setScannedIngredients(data.ingredients)
+      setScanStatus('reviewing')
+    } catch {
+      setScanErrorMessage('Could not analyze that photo — please try again.')
+      setScanStatus('error')
+    }
+  }
+
+  const handleConfirmScan = () => {
+    const finalIngredients = scannedIngredients.map((item) => item.trim()).filter(Boolean)
+    setIngredients(finalIngredients.join(', '))
+    setScanStatus('idle')
+    runGenerate(finalIngredients)
+  }
+
+  const handleCancelScan = () => {
+    setScanStatus('idle')
+    setScannedIngredients([])
   }
 
   const handleSaveRecipe = async (recipe: RecipeOption) => {
@@ -575,6 +718,47 @@ function App() {
               value={ingredients}
               onChange={(e) => setIngredients(e.target.value)}
             />
+          </div>
+
+          <div className="scan-fridge">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="scan-file-input"
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) handleImageSelected(file)
+                e.target.value = ''
+              }}
+            />
+            <button
+              type="button"
+              className="scan-button"
+              disabled={scanStatus === 'scanning'}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {scanStatus === 'scanning' ? (
+                <span className="generate-loading">
+                  <span className="spinner" aria-hidden="true" />
+                  Analyzing photo...
+                </span>
+              ) : (
+                '📷 Scan Fridge'
+              )}
+            </button>
+
+            {scanStatus === 'error' && <p className="error-message">{scanErrorMessage}</p>}
+
+            {scanStatus === 'reviewing' && (
+              <ScannedIngredientsEditor
+                ingredients={scannedIngredients}
+                onChange={setScannedIngredients}
+                onConfirm={handleConfirmScan}
+                onCancel={handleCancelScan}
+              />
+            )}
           </div>
 
           <div className="time-filter">

@@ -167,8 +167,50 @@ Ingredients: ${ingredients.join(', ')}`
   return recipe
 }
 
+const FRIDGE_SCAN_SCHEMA = {
+  type: Type.OBJECT,
+  properties: {
+    ingredients: { type: Type.ARRAY, items: { type: Type.STRING } },
+  },
+  required: ['ingredients'],
+}
+
+async function scanFridgeImage(base64Data, mimeType) {
+  if (!ai) throw new Error('GEMINI_API_KEY is not set')
+
+  const prompt = `You are a kitchen assistant. Look at this photo of a fridge or pantry.
+
+Identify every visible food ingredient. Use short, common ingredient names (e.g. "eggs", "milk", "spinach", "parmesan") — not brand names, not quantities, not packaging descriptions.
+
+If you cannot identify any food ingredients in the image, return an empty array.
+
+Return only JSON in this exact shape:
+{
+  "ingredients": []
+}`
+
+  const response = await ai.models.generateContent({
+    model: MODEL,
+    contents: [{ inlineData: { mimeType, data: base64Data } }, prompt],
+    config: {
+      responseMimeType: 'application/json',
+      responseSchema: FRIDGE_SCAN_SCHEMA,
+    },
+  })
+
+  const result = JSON.parse(response.text)
+
+  if (!Array.isArray(result.ingredients)) {
+    throw new Error('Gemini response did not match the expected ingredients shape')
+  }
+
+  return result.ingredients
+}
+
 app.use(cors({ origin: process.env.ALLOWED_ORIGIN || '*' }))
 app.use(express.json())
+
+const imageBodyParser = express.json({ limit: '8mb' })
 
 app.get('/', (req, res) => {
   res.send('PantryPal API is running')
@@ -192,6 +234,28 @@ app.post('/api/recipe', async (req, res) => {
   } catch (err) {
     console.error('Gemini recipe generation failed:', err.message)
     res.status(502).json({ error: 'Recipe generation failed' })
+  }
+})
+
+const SUPPORTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif']
+
+app.post('/api/scan-fridge', imageBodyParser, async (req, res) => {
+  const { imageBase64, mimeType } = req.body
+
+  if (typeof imageBase64 !== 'string' || !imageBase64) {
+    return res.status(400).json({ error: 'imageBase64 is required' })
+  }
+
+  if (typeof mimeType !== 'string' || !SUPPORTED_IMAGE_TYPES.includes(mimeType)) {
+    return res.status(400).json({ error: 'Unsupported image type' })
+  }
+
+  try {
+    const ingredients = await scanFridgeImage(imageBase64, mimeType)
+    res.json({ ingredients })
+  } catch (err) {
+    console.error('Gemini fridge scan failed:', err.message)
+    res.status(502).json({ error: 'Could not analyze image' })
   }
 })
 
