@@ -106,6 +106,31 @@ const RECIPE_SCHEMA = {
   required: ['recipes'],
 }
 
+function isTransientGeminiError(err) {
+  try {
+    const parsed = JSON.parse(err.message)
+    return parsed?.error?.code === 503 || parsed?.error?.status === 'UNAVAILABLE'
+  } catch {
+    return false
+  }
+}
+
+// Gemini occasionally returns a transient 503 ("high demand") that has nothing
+// to do with our quota — retrying a moment later usually just works. This does
+// NOT retry on 429 (quota exhausted), since that fails identically every time
+// until the daily reset and retrying would only add delay for no benefit.
+async function withGeminiRetry(fn, retries = 2, delayMs = 800) {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await fn()
+    } catch (err) {
+      if (!isTransientGeminiError(err) || attempt === retries) throw err
+      console.error(`Gemini call hit transient overload, retrying (attempt ${attempt + 1}/${retries})...`)
+      await new Promise((resolve) => setTimeout(resolve, delayMs * (attempt + 1)))
+    }
+  }
+}
+
 async function generateRecipe(ingredients, maxCookTime) {
   if (!ai) throw new Error('GEMINI_API_KEY is not set')
 
@@ -149,14 +174,16 @@ Return the result as JSON in this exact shape:
 
 Ingredients: ${ingredients.join(', ')}`
 
-  const response = await ai.models.generateContent({
-    model: MODEL,
-    contents: prompt,
-    config: {
-      responseMimeType: 'application/json',
-      responseSchema: RECIPE_SCHEMA,
-    },
-  })
+  const response = await withGeminiRetry(() =>
+    ai.models.generateContent({
+      model: MODEL,
+      contents: prompt,
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: RECIPE_SCHEMA,
+      },
+    }),
+  )
 
   const recipe = JSON.parse(response.text)
 
@@ -189,14 +216,16 @@ Return only JSON in this exact shape:
   "ingredients": []
 }`
 
-  const response = await ai.models.generateContent({
-    model: MODEL,
-    contents: [{ inlineData: { mimeType, data: base64Data } }, prompt],
-    config: {
-      responseMimeType: 'application/json',
-      responseSchema: FRIDGE_SCAN_SCHEMA,
-    },
-  })
+  const response = await withGeminiRetry(() =>
+    ai.models.generateContent({
+      model: MODEL,
+      contents: [{ inlineData: { mimeType, data: base64Data } }, prompt],
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: FRIDGE_SCAN_SCHEMA,
+      },
+    }),
+  )
 
   const result = JSON.parse(response.text)
 
