@@ -242,35 +242,17 @@ function getIngredientEmoji(name: string): string {
   return match ? INGREDIENT_EMOJI_MAP[match] : '🍽️'
 }
 
-function IngredientChip({
-  name,
-  onRemove,
-  flying = false,
-  flightDelay = 0,
-}: {
-  name: string
-  onRemove?: () => void
-  flying?: boolean
-  flightDelay?: number
-}) {
+function IngredientChip({ name, onRemove }: { name: string; onRemove?: () => void }) {
   return (
     <motion.div
       layout
       layoutId={`ingredient-chip-${name}`}
-      className={flying ? 'ingredient-chip ingredient-chip-flying' : 'ingredient-chip'}
-      initial={flying ? { opacity: 1, scale: 1, y: 0 } : { opacity: 0, scale: 0.7, y: 8 }}
-      animate={flying ? { opacity: 0, scale: 0.55 } : { opacity: 1, scale: 1, y: 0 }}
+      className="ingredient-chip"
+      initial={{ opacity: 0, scale: 0.7, y: 8 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.7 }}
-      whileHover={flying ? undefined : { scale: 1.06 }}
-      transition={
-        flying
-          ? {
-              layout: { type: 'spring', stiffness: 260, damping: 26 },
-              opacity: { delay: 0.5 + flightDelay, duration: 0.3 },
-              scale: { delay: 0.5 + flightDelay, duration: 0.3 },
-            }
-          : { type: 'spring', stiffness: 500, damping: 30 }
-      }
+      whileHover={{ scale: 1.06 }}
+      transition={{ type: 'spring', stiffness: 500, damping: 30 }}
     >
       <span className="ingredient-chip-emoji" aria-hidden="true">
         {getIngredientEmoji(name)}
@@ -287,6 +269,39 @@ function IngredientChip({
         </button>
       )}
     </motion.div>
+  )
+}
+
+function FlyingIngredient({ name, index, total }: { name: string; index: number; total: number }) {
+  const columns = Math.min(total, 6)
+  const slot = index % columns
+  const row = Math.floor(index / columns)
+  const x0 = (slot - (columns - 1) / 2) * 36
+  const y0 = (slot % 2 === 0 ? -34 : -20) - row * 26
+  const rot = (index % 2 === 0 ? 1 : -1) * (8 + (index % 3) * 4)
+  const delay = 0.2 + index * 0.14
+
+  return (
+    <motion.span
+      className="flying-emoji"
+      initial={{ x: x0, y: y0, scale: 0.6, opacity: 0, rotate: rot }}
+      animate={{
+        x: [x0, x0, x0, x0 * 0.35, 0],
+        y: [y0, y0 - 9, y0 + 3, y0 + 34, 62],
+        scale: [0.6, 1.05, 1, 0.85, 0.3],
+        opacity: [0, 1, 1, 1, 0],
+        rotate: [rot, rot * 1.4, rot * 0.5, rot * 0.25, 0],
+      }}
+      transition={{
+        duration: 1.1,
+        delay,
+        times: [0, 0.32, 0.52, 0.74, 1],
+        ease: 'easeInOut',
+      }}
+      aria-hidden="true"
+    >
+      {getIngredientEmoji(name)}
+    </motion.span>
   )
 }
 
@@ -330,7 +345,7 @@ function CookingPotScene({ ingredients, loadingText }: { ingredients: string[]; 
       </div>
       <div className="flying-chip-layer" aria-hidden="true">
         {ingredients.map((name, index) => (
-          <IngredientChip key={name} name={name} flying flightDelay={index * 0.08} />
+          <FlyingIngredient key={name} name={name} index={index} total={ingredients.length} />
         ))}
       </div>
       <p className="cooking-caption">{loadingText}</p>
