@@ -70,6 +70,28 @@ function ChefMascot() {
   )
 }
 
+function Sprig({ className }: { className: string }) {
+  return (
+    <svg className={`page-accent ${className}`} viewBox="0 0 60 90" width="60" height="90" aria-hidden="true">
+      <path className="sprig-stem" d="M30,88 C29,65 31,45 30,15" />
+      <path className="sprig-leaf" d="M30,60 C12,55 6,38 18,28 C29,36 31,48 30,60 Z" />
+      <path className="sprig-leaf" d="M30,45 C48,40 54,25 44,15 C33,22 30,33 30,45 Z" />
+      <ellipse className="sprig-bud" cx="30" cy="12" rx="6" ry="9" />
+    </svg>
+  )
+}
+
+function PageAccents() {
+  return (
+    <>
+      <Sprig className="page-accent-tl" />
+      <Sprig className="page-accent-tr" />
+      <Sprig className="page-accent-bl" />
+      <Sprig className="page-accent-br" />
+    </>
+  )
+}
+
 function RecipeMeta({ recipe }: { recipe: RecipeOption }) {
   return (
     <div className="recipe-meta">
@@ -363,6 +385,7 @@ function App() {
 
   return (
     <section id="home">
+      <PageAccents />
       <div className="topbar">
         {user ? (
           <div className="user-info">
@@ -379,7 +402,9 @@ function App() {
       </div>
 
       <div className="hero">
-        <ChefMascot />
+        <div className="mascot-wrap">
+          <ChefMascot />
+        </div>
         <h1>PantryPal</h1>
       </div>
       <p className="subtitle">

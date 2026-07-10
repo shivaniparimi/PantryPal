@@ -8,6 +8,75 @@
   box-sizing: border-box;
 }
 
+.page-accent {
+  position: fixed;
+  opacity: 0.5;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.page-accent-tl {
+  top: 0;
+  left: 16px;
+  transform: rotate(180deg);
+}
+
+.page-accent-tr {
+  top: 0;
+  right: 16px;
+  transform: rotate(180deg) scaleX(-1);
+}
+
+.page-accent-bl {
+  bottom: 0;
+  left: 16px;
+}
+
+.page-accent-br {
+  bottom: 0;
+  right: 16px;
+  transform: scaleX(-1);
+}
+
+.sprig-stem {
+  fill: none;
+  stroke: var(--basil);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.sprig-leaf,
+.sprig-bud {
+  fill: var(--basil);
+}
+
+@media (max-width: 900px) {
+  .page-accent {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .page-accent-tl,
+  .page-accent-bl {
+    animation: sprig-sway 7s ease-in-out infinite;
+  }
+  .page-accent-tr,
+  .page-accent-br {
+    animation: sprig-sway 7s ease-in-out infinite 1s;
+  }
+}
+
+@keyframes sprig-sway {
+  0%,
+  100% {
+    rotate: -1.5deg;
+  }
+  50% {
+    rotate: 1.5deg;
+  }
+}
+
 .subtitle {
   font-size: 17px;
   color: var(--text);
@@ -25,6 +94,34 @@
   }
 }
 
+.mascot-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.mascot-wrap::before,
+.mascot-wrap::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 58%;
+  width: 46px;
+  height: 46px;
+  margin: -23px 0 0 -23px;
+  border-radius: 50%;
+  background: var(--accent-bg);
+  filter: blur(6px);
+  z-index: -1;
+  opacity: 0;
+}
+
+.mascot-wrap::after {
+  width: 34px;
+  height: 34px;
+  margin: -17px 0 0 -17px;
+  background: var(--basil-bg);
+}
+
 .mascot {
   flex-shrink: 0;
   overflow: visible;
@@ -37,6 +134,11 @@
   stroke: var(--text-h);
   stroke-width: 2.5;
   stroke-linejoin: round;
+}
+
+.mascot-hat {
+  transform-origin: 50% 60%;
+  transform-box: fill-box;
 }
 
 .mascot-eye {
@@ -92,6 +194,17 @@
     animation: mascot-wiggle 0.5s ease-in-out;
   }
 
+  .mascot-hat {
+    animation: hat-wiggle 4s ease-in-out infinite;
+  }
+
+  .mascot-wrap::before {
+    animation: mascot-trail 3.2s ease-in-out infinite;
+  }
+  .mascot-wrap::after {
+    animation: mascot-trail 3.2s ease-in-out infinite 0.15s;
+  }
+
   .mascot-eye {
     animation: mascot-blink 4.5s ease-in-out infinite;
   }
@@ -138,6 +251,32 @@
   }
   95% {
     transform: scaleY(0.1);
+  }
+}
+
+@keyframes hat-wiggle {
+  0%,
+  85%,
+  100% {
+    transform: rotate(0deg);
+  }
+  90% {
+    transform: rotate(-2deg);
+  }
+  95% {
+    transform: rotate(2deg);
+  }
+}
+
+@keyframes mascot-trail {
+  0%,
+  100% {
+    transform: translateY(4px) scale(0.85);
+    opacity: 0;
+  }
+  50% {
+    transform: translateY(-2px) scale(1);
+    opacity: 0.55;
   }
 }
 

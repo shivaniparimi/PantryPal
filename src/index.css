@@ -1,20 +1,20 @@
 :root {
-  --bg: #fffbf5;
-  --card-bg: #fff3e4;
-  --text: #7a6483;
-  --text-h: #3d2645;
-  --border: #ecd9c6;
+  --bg: #eaf3e1;
+  --card-bg: #fffbf2;
+  --text: #5c6b52;
+  --text-h: #2f3b27;
+  --border: #d3e3c4;
 
-  --accent: #ff6b4a;
-  --accent-bg: rgba(255, 107, 74, 0.12);
-  --accent-border: rgba(255, 107, 74, 0.5);
+  --accent: #e2703a;
+  --accent-bg: rgba(226, 112, 58, 0.12);
+  --accent-border: rgba(226, 112, 58, 0.5);
 
-  --basil: #2f8a52;
-  --basil-bg: rgba(76, 175, 109, 0.16);
-  --lemon: #a97a00;
-  --lemon-bg: rgba(255, 201, 60, 0.22);
+  --basil: #3f7d4e;
+  --basil-bg: rgba(63, 125, 78, 0.14);
+  --lemon: #c98a1f;
+  --lemon-bg: rgba(201, 138, 31, 0.18);
 
-  --shadow: rgba(61, 38, 69, 0.1) 0 10px 20px -6px, rgba(61, 38, 69, 0.06) 0 4px 8px -2px;
+  --shadow: rgba(47, 59, 39, 0.12) 0 10px 20px -6px, rgba(47, 59, 39, 0.07) 0 4px 8px -2px;
 
   --display: 'Fredoka', system-ui, sans-serif;
   --sans: 'Nunito', system-ui, sans-serif;
@@ -36,20 +36,20 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #211a2b;
-    --card-bg: #2b2138;
-    --text: #c2add0;
-    --text-h: #f6ecf9;
-    --border: #453653;
+    --bg: #16210f;
+    --card-bg: #212b18;
+    --text: #b9c7a4;
+    --text-h: #f3f0e0;
+    --border: #33422a;
 
-    --accent: #ff8567;
-    --accent-bg: rgba(255, 133, 103, 0.18);
-    --accent-border: rgba(255, 133, 103, 0.5);
+    --accent: #ff9a63;
+    --accent-bg: rgba(255, 154, 99, 0.16);
+    --accent-border: rgba(255, 154, 99, 0.5);
 
-    --basil: #6fcf8f;
-    --basil-bg: rgba(111, 207, 143, 0.18);
-    --lemon: #ffd666;
-    --lemon-bg: rgba(255, 214, 102, 0.18);
+    --basil: #7bc98c;
+    --basil-bg: rgba(123, 201, 140, 0.16);
+    --lemon: #e8c168;
+    --lemon-bg: rgba(232, 193, 104, 0.18);
 
     --shadow: rgba(0, 0, 0, 0.4) 0 10px 20px -6px, rgba(0, 0, 0, 0.25) 0 4px 8px -2px;
   }
