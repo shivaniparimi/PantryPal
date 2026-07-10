@@ -831,7 +831,7 @@ function App() {
 
             <div className="preference-row">
               <label htmlFor="pref-cuisine" className="preference-label">
-                🌎 Cuisine (Optional)
+                🌎 Cuisine
               </label>
               <select
                 id="pref-cuisine"
