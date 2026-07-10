@@ -208,15 +208,23 @@ Return only JSON in this exact shape:
 }
 
 app.use(cors({ origin: process.env.ALLOWED_ORIGIN || '*' }))
-app.use(express.json())
 
-const imageBodyParser = express.json({ limit: '8mb' })
+// Each route below applies its own express.json() rather than one global
+// app.use(express.json()) — a request body can only be read once, so a
+// blanket parser at the default 100kb limit would consume (and reject) large
+// image uploads before /api/scan-fridge's own larger-limit parser ever runs.
+const jsonBody = express.json()
+
+// Client-side rejects raw files over 8MB, but base64 encoding inflates size by
+// ~33%, plus JSON wrapper overhead — so the body limit here must be comfortably
+// larger than 8MB or valid uploads get rejected with a silent 413.
+const imageBodyParser = express.json({ limit: '12mb' })
 
 app.get('/', (req, res) => {
   res.send('PantryPal API is running')
 })
 
-app.post('/api/recipe', async (req, res) => {
+app.post('/api/recipe', jsonBody, async (req, res) => {
   const { ingredients, maxCookTime } = req.body
 
   if (!Array.isArray(ingredients) || ingredients.length === 0) {
@@ -259,7 +267,7 @@ app.post('/api/scan-fridge', imageBodyParser, async (req, res) => {
   }
 })
 
-app.post('/api/recipes', requireAuth, async (req, res) => {
+app.post('/api/recipes', requireAuth, jsonBody, async (req, res) => {
   const { title, summary, ingredients, steps, tags, cookTime, servings, difficulty } = req.body
 
   if (
@@ -291,7 +299,7 @@ app.post('/api/recipes', requireAuth, async (req, res) => {
   }
 })
 
-app.put('/api/recipes/:id', requireAuth, async (req, res) => {
+app.put('/api/recipes/:id', requireAuth, jsonBody, async (req, res) => {
   const { title, summary, ingredients, steps, tags, cookTime, servings, difficulty } = req.body
 
   if (
