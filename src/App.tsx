@@ -92,6 +92,122 @@ function PageAccents() {
   )
 }
 
+const SERVING_MIN = 1
+const SERVING_MAX = 12
+const SERVING_PRESETS = [1, 2, 4, 6]
+
+function parseServingsNumber(servings: string): number {
+  const match = servings.match(/\d+/)
+  const n = match ? parseInt(match[0], 10) : 1
+  return n > 0 ? n : 1
+}
+
+function formatServingsLabel(original: string, count: number): string {
+  const match = original.match(/^\d+\s*(.*)$/)
+  let unit = match ? match[1].trim() : 'servings'
+  if (unit === 'serving' || unit === 'servings' || unit === '') {
+    unit = count === 1 ? 'serving' : 'servings'
+  }
+  return `${count} ${unit}`
+}
+
+const COMMON_FRACTIONS: Array<[number, string]> = [
+  [0.25, '¼'],
+  [0.333, '⅓'],
+  [0.5, '½'],
+  [0.667, '⅔'],
+  [0.75, '¾'],
+]
+
+function formatScaledAmount(n: number): string {
+  const whole = Math.floor(n)
+  const frac = n - whole
+
+  if (frac < 0.05) return `${whole || 0}`
+
+  let closest = COMMON_FRACTIONS[0]
+  let closestDiff = Math.abs(frac - closest[0])
+  for (const candidate of COMMON_FRACTIONS) {
+    const diff = Math.abs(frac - candidate[0])
+    if (diff < closestDiff) {
+      closest = candidate
+      closestDiff = diff
+    }
+  }
+
+  if (closestDiff > 0.08) {
+    return `${Math.round(n * 100) / 100}`
+  }
+
+  return whole > 0 ? `${whole}${closest[1]}` : closest[1]
+}
+
+function scaleIngredient(ingredient: string, factor: number): string {
+  const match = ingredient.match(/^(\d+\s+\d+\/\d+|\d+\/\d+|\d*\.?\d+)/)
+  if (!match) return ingredient
+
+  const raw = match[0]
+  const rest = ingredient.slice(raw.length)
+  let value: number
+
+  if (raw.includes(' ')) {
+    const [whole, frac] = raw.split(' ')
+    const [n, d] = frac.split('/').map(Number)
+    value = parseInt(whole, 10) + n / d
+  } else if (raw.includes('/')) {
+    const [n, d] = raw.split('/').map(Number)
+    value = n / d
+  } else {
+    value = parseFloat(raw)
+  }
+
+  return `${formatScaledAmount(value * factor)}${rest}`
+}
+
+function scaleIngredients(ingredients: string[], baseServings: number, targetServings: number): string[] {
+  if (baseServings === targetServings) return ingredients
+  const factor = targetServings / baseServings
+  return ingredients.map((item) => scaleIngredient(item, factor))
+}
+
+function ServingAdjuster({ value, onChange }: { value: number; onChange: (n: number) => void }) {
+  const percent = ((value - SERVING_MIN) / (SERVING_MAX - SERVING_MIN)) * 100
+
+  return (
+    <div className="serving-adjuster">
+      <p className="recipe-label">Servings</p>
+      <div className="serving-slider-wrap">
+        <span key={value} className="serving-bubble" style={{ left: `${percent}%` }}>
+          {value}
+        </span>
+        <input
+          type="range"
+          className="serving-slider"
+          min={SERVING_MIN}
+          max={SERVING_MAX}
+          step={1}
+          value={value}
+          onChange={(e) => onChange(Number(e.target.value))}
+          style={{ '--fill-percent': `${percent}%` } as React.CSSProperties}
+          aria-label="Adjust servings"
+        />
+      </div>
+      <div className="serving-presets">
+        {SERVING_PRESETS.map((preset) => (
+          <button
+            type="button"
+            key={preset}
+            className={value === preset ? 'serving-preset serving-preset-active' : 'serving-preset'}
+            onClick={() => onChange(preset)}
+          >
+            {preset}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function RecipeMeta({ recipe }: { recipe: RecipeOption }) {
   return (
     <div className="recipe-meta">
@@ -138,6 +254,7 @@ function App() {
   const [recipes, setRecipes] = useState<RecipeOption[]>([])
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
+  const [adjustedServings, setAdjustedServings] = useState<number | null>(null)
   const abortRef = useRef<AbortController | null>(null)
   const canGenerate = ingredients.trim().length > 0
 
@@ -173,6 +290,19 @@ function App() {
 
   const selectedSavedRecipe = savedRecipes.find((recipe) => recipe.id === savedSelectedId) ?? null
 
+  const currentRecipe = selectedIndex !== null ? recipes[selectedIndex] : null
+  const currentBaseServings = currentRecipe ? parseServingsNumber(currentRecipe.servings || '1') : 1
+  const currentServings = adjustedServings ?? currentBaseServings
+  const currentDisplayIngredients = currentRecipe
+    ? scaleIngredients(currentRecipe.ingredients, currentBaseServings, currentServings)
+    : []
+
+  const savedBaseServings = selectedSavedRecipe ? parseServingsNumber(selectedSavedRecipe.servings || '1') : 1
+  const savedActiveServings = adjustedServings ?? savedBaseServings
+  const savedDisplayIngredients = selectedSavedRecipe
+    ? scaleIngredients(selectedSavedRecipe.ingredients, savedBaseServings, savedActiveServings)
+    : []
+
   const toggleTag = (tag: string) => {
     setSelectedTags((current) =>
       current.includes(tag) ? current.filter((t) => t !== tag) : [...current, tag],
@@ -183,6 +313,7 @@ function App() {
     setSavedSelectedId(id)
     setIsEditing(false)
     setDeleteStatus('idle')
+    setAdjustedServings(null)
   }
 
   const toggleEditTag = (tag: string) => {
@@ -313,6 +444,7 @@ function App() {
   const selectGeneratedRecipe = (index: number | null) => {
     setSelectedIndex(index)
     setSaveStatus('idle')
+    setAdjustedServings(null)
   }
 
   const handleSaveEdit = async () => {
@@ -408,7 +540,7 @@ function App() {
         <h1>PantryPal</h1>
       </div>
       <p className="subtitle">
-        Tell us what's leftover in your kitchen and we'll suggest a recipe to help clean out your pantry!
+        Tell us what’s in your kitchen, and we’ll suggest a recipe!
       </p>
 
       <div className="tabs">
@@ -458,31 +590,37 @@ function App() {
           </button>
 
           <div className="result-box">
-            {status === 'done' && selectedIndex !== null ? (
+            {status === 'done' && currentRecipe ? (
               <div className="recipe-card">
                 <button type="button" className="back-link" onClick={() => selectGeneratedRecipe(null)}>
                   ← Back to options
                 </button>
-                <h3>{recipes[selectedIndex].title}</h3>
-                <RecipeMeta recipe={recipes[selectedIndex]} />
-                {(recipes[selectedIndex].tags ?? []).length > 0 && (
+                <h3>{currentRecipe.title}</h3>
+                <RecipeMeta
+                  recipe={{
+                    ...currentRecipe,
+                    servings: formatServingsLabel(currentRecipe.servings || 'servings', currentServings),
+                  }}
+                />
+                {(currentRecipe.tags ?? []).length > 0 && (
                   <div className="tag-pills">
-                    {(recipes[selectedIndex].tags ?? []).map((tag) => (
+                    {(currentRecipe.tags ?? []).map((tag) => (
                       <span key={tag} className="tag-pill">
                         {tag}
                       </span>
                     ))}
                   </div>
                 )}
+                <ServingAdjuster value={currentServings} onChange={setAdjustedServings} />
                 <p className="recipe-label">Ingredients</p>
                 <ul>
-                  {recipes[selectedIndex].ingredients.map((item) => (
+                  {currentDisplayIngredients.map((item) => (
                     <li key={item}>{item}</li>
                   ))}
                 </ul>
                 <p className="recipe-label">Steps</p>
                 <ol>
-                  {recipes[selectedIndex].steps.map((step) => (
+                  {currentRecipe.steps.map((step) => (
                     <li key={step}>{step}</li>
                   ))}
                 </ol>
@@ -492,7 +630,7 @@ function App() {
                     type="button"
                     className="save-button"
                     disabled={saveStatus === 'saving' || saveStatus === 'saved'}
-                    onClick={() => handleSaveRecipe(recipes[selectedIndex])}
+                    onClick={() => handleSaveRecipe(currentRecipe)}
                   >
                     {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Saved!' : 'Save Recipe'}
                   </button>
@@ -649,7 +787,12 @@ function App() {
               ) : (
                 <>
                   <h3>{selectedSavedRecipe.title}</h3>
-                  <RecipeMeta recipe={selectedSavedRecipe} />
+                  <RecipeMeta
+                    recipe={{
+                      ...selectedSavedRecipe,
+                      servings: formatServingsLabel(selectedSavedRecipe.servings || 'servings', savedActiveServings),
+                    }}
+                  />
                   {(selectedSavedRecipe.tags ?? []).length > 0 && (
                     <div className="tag-pills">
                       {(selectedSavedRecipe.tags ?? []).map((tag) => (
@@ -659,9 +802,10 @@ function App() {
                       ))}
                     </div>
                   )}
+                  <ServingAdjuster value={savedActiveServings} onChange={setAdjustedServings} />
                   <p className="recipe-label">Ingredients</p>
                   <ul>
-                    {selectedSavedRecipe.ingredients.map((item) => (
+                    {savedDisplayIngredients.map((item) => (
                       <li key={item}>{item}</li>
                     ))}
                   </ul>
