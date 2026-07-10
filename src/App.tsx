@@ -53,6 +53,32 @@ const MISSING_INGREDIENT_OPTIONS = [
   { value: 'any', label: 'Any' },
 ]
 
+const GENERATE_LOADING_MESSAGES = [
+  'Generating recipes...',
+  'Thinking about flavors...',
+  'Pairing your ingredients...',
+  'Almost there...',
+]
+
+const SCAN_LOADING_MESSAGES = ['Analyzing photo...', 'Spotting ingredients...', 'Almost done...']
+
+function useRotatingMessage(active: boolean, messages: string[], intervalMs = 1800) {
+  const [index, setIndex] = useState(0)
+
+  useEffect(() => {
+    if (!active) {
+      setIndex(0)
+      return
+    }
+    const id = setInterval(() => {
+      setIndex((current) => (current + 1) % messages.length)
+    }, intervalMs)
+    return () => clearInterval(id)
+  }, [active, messages, intervalMs])
+
+  return messages[index]
+}
+
 type Status = 'idle' | 'loading' | 'done' | 'error'
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 type ScanStatus = 'idle' | 'scanning' | 'reviewing' | 'error'
@@ -375,6 +401,8 @@ function App() {
   const abortRef = useRef<AbortController | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const canGenerate = ingredients.trim().length > 0
+  const generateLoadingText = useRotatingMessage(status === 'loading', GENERATE_LOADING_MESSAGES)
+  const scanLoadingText = useRotatingMessage(scanStatus === 'scanning', SCAN_LOADING_MESSAGES)
 
   const [savedRecipes, setSavedRecipes] = useState<SavedRecipe[]>([])
   const [savedStatus, setSavedStatus] = useState<Status>('idle')
@@ -770,7 +798,7 @@ function App() {
               {scanStatus === 'scanning' ? (
                 <span className="generate-loading">
                   <span className="spinner" aria-hidden="true" />
-                  Analyzing photo...
+                  {scanLoadingText}
                 </span>
               ) : (
                 '📷 Scan Fridge'
@@ -874,7 +902,7 @@ function App() {
             {status === 'loading' ? (
               <span className="generate-loading">
                 <span className="spinner" aria-hidden="true" />
-                Generating...
+                {generateLoadingText}
               </span>
             ) : (
               'Generate Recipe'
