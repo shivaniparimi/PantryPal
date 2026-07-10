@@ -119,7 +119,7 @@ function isTransientGeminiError(err) {
 // to do with our quota — retrying a moment later usually just works. This does
 // NOT retry on 429 (quota exhausted), since that fails identically every time
 // until the daily reset and retrying would only add delay for no benefit.
-async function withGeminiRetry(fn, retries = 2, delayMs = 800) {
+async function withGeminiRetry(fn, retries = 3, delayMs = 1000) {
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       return await fn()

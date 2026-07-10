@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { AnimatePresence, motion, MotionConfig, type Variants } from 'motion/react'
 import { GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut, type User } from 'firebase/auth'
 import { auth } from './firebase'
 import './App.css'
@@ -62,6 +63,18 @@ const GENERATE_LOADING_MESSAGES = [
 
 const SCAN_LOADING_MESSAGES = ['Analyzing photo...', 'Spotting ingredients...', 'Almost done...']
 
+const MIN_LOADING_MS = 1800
+
+const cardListVariants: Variants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.12 } },
+}
+
+const cardVariants: Variants = {
+  hidden: { opacity: 0, y: 16 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: 'easeOut' } },
+}
+
 function useRotatingMessage(active: boolean, messages: string[], intervalMs = 1800) {
   const [index, setIndex] = useState(0)
 
@@ -77,6 +90,252 @@ function useRotatingMessage(active: boolean, messages: string[], intervalMs = 18
   }, [active, messages, intervalMs])
 
   return messages[index]
+}
+
+function parseIngredientList(text: string): string[] {
+  return text
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+}
+
+const INGREDIENT_EMOJI_MAP: Record<string, string> = {
+  // proteins
+  egg: '🥚',
+  eggs: '🥚',
+  chicken: '🍗',
+  turkey: '🦃',
+  beef: '🥩',
+  steak: '🥩',
+  pork: '🥓',
+  bacon: '🥓',
+  ham: '🍖',
+  sausage: '🌭',
+  shrimp: '🍤',
+  prawn: '🍤',
+  fish: '🐟',
+  salmon: '🐟',
+  tuna: '🐟',
+  crab: '🦀',
+  lobster: '🦞',
+  tofu: '🧊',
+  beans: '🫘',
+  lentils: '🫘',
+  chickpeas: '🫘',
+  hummus: '🧆',
+  // dairy
+  milk: '🥛',
+  cheese: '🧀',
+  cheddar: '🧀',
+  mozzarella: '🧀',
+  parmesan: '🧀',
+  yogurt: '🥣',
+  butter: '🧈',
+  cream: '🥛',
+  // grains / starches
+  rice: '🍚',
+  pasta: '🍝',
+  spaghetti: '🍝',
+  noodle: '🍜',
+  bread: '🍞',
+  flour: '🌾',
+  oats: '🌾',
+  oatmeal: '🌾',
+  quinoa: '🌾',
+  tortilla: '🫓',
+  potato: '🥔',
+  'sweet potato': '🍠',
+  corn: '🌽',
+  // vegetables
+  onion: '🧅',
+  garlic: '🧄',
+  tomato: '🍅',
+  carrot: '🥕',
+  broccoli: '🥦',
+  spinach: '🥬',
+  lettuce: '🥬',
+  kale: '🥬',
+  cabbage: '🥬',
+  cucumber: '🥒',
+  pepper: '🫑',
+  chili: '🌶️',
+  jalapeno: '🌶️',
+  mushroom: '🍄',
+  eggplant: '🍆',
+  avocado: '🥑',
+  peas: '🫛',
+  zucchini: '🥒',
+  celery: '🥬',
+  // fruit
+  apple: '🍎',
+  banana: '🍌',
+  orange: '🍊',
+  lemon: '🍋',
+  lime: '🍋',
+  strawberry: '🍓',
+  strawberries: '🍓',
+  blueberry: '🫐',
+  blueberries: '🫐',
+  grape: '🍇',
+  grapes: '🍇',
+  peach: '🍑',
+  pineapple: '🍍',
+  mango: '🥭',
+  watermelon: '🍉',
+  // pantry / condiments
+  salt: '🧂',
+  sugar: '🍬',
+  honey: '🍯',
+  oil: '🫙',
+  'olive oil': '🫒',
+  olive: '🫒',
+  vinegar: '🫙',
+  'soy sauce': '🫙',
+  ketchup: '🍅',
+  mayo: '🫙',
+  mayonnaise: '🫙',
+  mustard: '🫙',
+  basil: '🌿',
+  cilantro: '🌿',
+  parsley: '🌿',
+  mint: '🌿',
+  cinnamon: '🌿',
+  cumin: '🌿',
+  paprika: '🌿',
+  nut: '🥜',
+  nuts: '🥜',
+  peanut: '🥜',
+  almond: '🥜',
+  walnut: '🥜',
+  chocolate: '🍫',
+  // drinks
+  coffee: '☕',
+  tea: '🍵',
+  juice: '🧃',
+  water: '💧',
+  // baking / dessert
+  cake: '🍰',
+  cupcake: '🧁',
+  cookie: '🍪',
+  cookies: '🍪',
+  brownie: '🍫',
+  pie: '🥧',
+  pancake: '🥞',
+  waffle: '🧇',
+  vanilla: '🍦',
+  cocoa: '🍫',
+  'baking soda': '🥄',
+  'baking powder': '🥄',
+  yeast: '🥄',
+  syrup: '🍯',
+  jam: '🍓',
+  jelly: '🍓',
+  marshmallow: '🍬',
+}
+
+function getIngredientEmoji(name: string): string {
+  const lower = name.toLowerCase().trim()
+  if (INGREDIENT_EMOJI_MAP[lower]) return INGREDIENT_EMOJI_MAP[lower]
+
+  const keys = Object.keys(INGREDIENT_EMOJI_MAP).sort((a, b) => b.length - a.length)
+  const match = keys.find((key) => lower.includes(key))
+  return match ? INGREDIENT_EMOJI_MAP[match] : '🍽️'
+}
+
+function IngredientChip({
+  name,
+  onRemove,
+  flying = false,
+  flightDelay = 0,
+}: {
+  name: string
+  onRemove?: () => void
+  flying?: boolean
+  flightDelay?: number
+}) {
+  return (
+    <motion.div
+      layout
+      layoutId={`ingredient-chip-${name}`}
+      className={flying ? 'ingredient-chip ingredient-chip-flying' : 'ingredient-chip'}
+      initial={flying ? { opacity: 1, scale: 1, y: 0 } : { opacity: 0, scale: 0.7, y: 8 }}
+      animate={flying ? { opacity: 0, scale: 0.55 } : { opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.7 }}
+      whileHover={flying ? undefined : { scale: 1.06 }}
+      transition={
+        flying
+          ? {
+              layout: { type: 'spring', stiffness: 260, damping: 26 },
+              opacity: { delay: 0.5 + flightDelay, duration: 0.3 },
+              scale: { delay: 0.5 + flightDelay, duration: 0.3 },
+            }
+          : { type: 'spring', stiffness: 500, damping: 30 }
+      }
+    >
+      <span className="ingredient-chip-emoji" aria-hidden="true">
+        {getIngredientEmoji(name)}
+      </span>
+      <span className="ingredient-chip-name">{name}</span>
+      {onRemove && (
+        <button
+          type="button"
+          className="ingredient-chip-remove"
+          onClick={onRemove}
+          aria-label={`Remove ${name}`}
+        >
+          ×
+        </button>
+      )}
+    </motion.div>
+  )
+}
+
+function CookingPot() {
+  return (
+    <svg className="pot" viewBox="0 0 100 100" width="84" height="84" aria-hidden="true">
+      <g className="pot-steam">
+        <path className="steam-puff steam-puff-1" d="M34,32 Q37,26 34,20 Q31,14 34,8" />
+        <path className="steam-puff steam-puff-2" d="M50,28 Q53,22 50,16 Q47,10 50,4" />
+        <path className="steam-puff steam-puff-3" d="M66,32 Q69,26 66,20 Q63,14 66,8" />
+      </g>
+      <g className="pot-sparkles">
+        <path className="pot-sparkle pot-sparkle-1" d="M20,26 l1.6,4 4,1.6 -4,1.6 -1.6,4 -1.6,-4 -4,-1.6 4,-1.6 Z" />
+        <path className="pot-sparkle pot-sparkle-2" d="M79,24 l1.4,3.6 3.6,1.4 -3.6,1.4 -1.4,3.6 -1.4,-3.6 -3.6,-1.4 3.6,-1.4 Z" />
+      </g>
+      <rect className="pot-handle pot-handle-left" x="2" y="40" width="16" height="9" rx="4.5" />
+      <rect className="pot-handle pot-handle-right" x="82" y="40" width="16" height="9" rx="4.5" />
+      <path className="pot-body" d="M14,44 Q14,86 50,90 Q86,86 86,44 Z" />
+      <ellipse className="pot-rim" cx="50" cy="44" rx="36" ry="10" />
+      <ellipse className="pot-liquid" cx="50" cy="44" rx="29" ry="6.5" />
+      <g className="pot-bubbles">
+        <circle className="pot-bubble pot-bubble-1" cx="38" cy="43" r="2.4" />
+        <circle className="pot-bubble pot-bubble-2" cx="50" cy="40" r="2" />
+        <circle className="pot-bubble pot-bubble-3" cx="61" cy="44" r="2.6" />
+      </g>
+    </svg>
+  )
+}
+
+function CookingPotScene({ ingredients, loadingText }: { ingredients: string[]; loadingText: string }) {
+  return (
+    <motion.div
+      className="cooking-scene"
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -14, scale: 0.94 }}
+      transition={{ duration: 0.35, ease: 'easeOut' }}
+    >
+      <div className="pot-wrap">
+        <CookingPot />
+      </div>
+      <div className="flying-chip-layer" aria-hidden="true">
+        {ingredients.map((name, index) => (
+          <IngredientChip key={name} name={name} flying flightDelay={index * 0.08} />
+        ))}
+      </div>
+      <p className="cooking-caption">{loadingText}</p>
+    </motion.div>
+  )
 }
 
 type Status = 'idle' | 'loading' | 'done' | 'error'
@@ -398,11 +657,26 @@ function App() {
   const [scanStatus, setScanStatus] = useState<ScanStatus>('idle')
   const [scannedIngredients, setScannedIngredients] = useState<string[]>([])
   const [scanErrorMessage, setScanErrorMessage] = useState('')
+  const [flyingIngredients, setFlyingIngredients] = useState<string[]>([])
+  const [displayStatus, setDisplayStatus] = useState<Status>('idle')
+  const loadingStartRef = useRef(0)
   const abortRef = useRef<AbortController | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const canGenerate = ingredients.trim().length > 0
-  const generateLoadingText = useRotatingMessage(status === 'loading', GENERATE_LOADING_MESSAGES)
+  const generateLoadingText = useRotatingMessage(displayStatus === 'loading', GENERATE_LOADING_MESSAGES)
   const scanLoadingText = useRotatingMessage(scanStatus === 'scanning', SCAN_LOADING_MESSAGES)
+
+  useEffect(() => {
+    if (status === 'loading') {
+      loadingStartRef.current = Date.now()
+      setDisplayStatus('loading')
+      return
+    }
+    const elapsed = Date.now() - loadingStartRef.current
+    const remaining = Math.max(MIN_LOADING_MS - elapsed, 0)
+    const id = setTimeout(() => setDisplayStatus(status), remaining)
+    return () => clearTimeout(id)
+  }, [status])
 
   const [savedRecipes, setSavedRecipes] = useState<SavedRecipe[]>([])
   const [savedStatus, setSavedStatus] = useState<Status>('idle')
@@ -536,6 +810,7 @@ function App() {
   const runGenerate = async (ingredientList: string[]) => {
     setStatus('loading')
     setSelectedIndex(null)
+    setFlyingIngredients(ingredientList)
 
     const controller = new AbortController()
     abortRef.current = controller
@@ -562,12 +837,12 @@ function App() {
   }
 
   const handleGenerate = () => {
-    runGenerate(
-      ingredients
-        .split(',')
-        .map((item) => item.trim())
-        .filter(Boolean),
-    )
+    runGenerate(parseIngredientList(ingredients))
+  }
+
+  const handleRemoveIngredient = (name: string) => {
+    const remaining = parseIngredientList(ingredients).filter((item) => item !== name)
+    setIngredients(remaining.join(', '))
   }
 
   const handleImageSelected = async (file: File) => {
@@ -720,6 +995,7 @@ function App() {
   }
 
   return (
+    <MotionConfig reducedMotion="user">
     <section id="home">
       <PageAccents />
       <div className="topbar">
@@ -775,6 +1051,19 @@ function App() {
               value={ingredients}
               onChange={(e) => setIngredients(e.target.value)}
             />
+            {displayStatus !== 'loading' && parseIngredientList(ingredients).length > 0 && (
+              <div className="ingredient-chip-list">
+                <AnimatePresence initial={false}>
+                  {parseIngredientList(ingredients).map((name) => (
+                    <IngredientChip
+                      key={name}
+                      name={name}
+                      onRemove={() => handleRemoveIngredient(name)}
+                    />
+                  ))}
+                </AnimatePresence>
+              </div>
+            )}
           </div>
 
           <div className="scan-fridge">
@@ -895,11 +1184,11 @@ function App() {
 
           <button
             type="button"
-            className={canGenerate && status !== 'loading' ? 'generate generate-pulse' : 'generate'}
-            disabled={!canGenerate || status === 'loading'}
+            className={canGenerate && displayStatus !== 'loading' ? 'generate generate-pulse' : 'generate'}
+            disabled={!canGenerate || displayStatus === 'loading'}
             onClick={handleGenerate}
           >
-            {status === 'loading' ? (
+            {displayStatus === 'loading' ? (
               <span className="generate-loading">
                 <span className="spinner" aria-hidden="true" />
                 {generateLoadingText}
@@ -910,86 +1199,108 @@ function App() {
           </button>
 
           <div className="result-box">
-            {status === 'done' && currentRecipe ? (
-              <div className="recipe-card">
-                <button type="button" className="back-link" onClick={() => selectGeneratedRecipe(null)}>
-                  ← Back to options
-                </button>
-                <h3>{currentRecipe.title}</h3>
-                <RecipeMeta
-                  recipe={{
-                    ...currentRecipe,
-                    servings: formatServingsLabel(currentRecipe.servings || 'servings', currentServings),
-                  }}
-                />
-                {(currentRecipe.tags ?? []).length > 0 && (
-                  <div className="tag-pills">
-                    {(currentRecipe.tags ?? []).map((tag) => (
-                      <span key={tag} className="tag-pill">
-                        {tag}
-                      </span>
+            <AnimatePresence mode="wait">
+              {displayStatus === 'loading' ? (
+                <CookingPotScene key="cooking" ingredients={flyingIngredients} loadingText={generateLoadingText} />
+              ) : displayStatus === 'done' && currentRecipe ? (
+                <motion.div
+                  key="detail"
+                  className="recipe-card recipe-card-motion"
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.3, ease: 'easeOut' }}
+                >
+                  <button type="button" className="back-link" onClick={() => selectGeneratedRecipe(null)}>
+                    ← Back to options
+                  </button>
+                  <h3>{currentRecipe.title}</h3>
+                  <RecipeMeta
+                    recipe={{
+                      ...currentRecipe,
+                      servings: formatServingsLabel(currentRecipe.servings || 'servings', currentServings),
+                    }}
+                  />
+                  {(currentRecipe.tags ?? []).length > 0 && (
+                    <div className="tag-pills">
+                      {(currentRecipe.tags ?? []).map((tag) => (
+                        <span key={tag} className="tag-pill">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <ServingAdjuster value={currentServings} onChange={setAdjustedServings} />
+                  <p className="recipe-label">Ingredients</p>
+                  <ul>
+                    {currentDisplayIngredients.map((item) => (
+                      <li key={item}>{item}</li>
                     ))}
-                  </div>
-                )}
-                <ServingAdjuster value={currentServings} onChange={setAdjustedServings} />
-                <p className="recipe-label">Ingredients</p>
-                <ul>
-                  {currentDisplayIngredients.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-                <p className="recipe-label">Steps</p>
-                <ol>
-                  {currentRecipe.steps.map((step) => (
-                    <li key={step}>{step}</li>
-                  ))}
-                </ol>
+                  </ul>
+                  <p className="recipe-label">Steps</p>
+                  <ol>
+                    {currentRecipe.steps.map((step) => (
+                      <li key={step}>{step}</li>
+                    ))}
+                  </ol>
 
-                {user ? (
-                  <button
-                    type="button"
-                    className="save-button"
-                    disabled={saveStatus === 'saving' || saveStatus === 'saved'}
-                    onClick={() => handleSaveRecipe(currentRecipe)}
-                  >
-                    {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Saved!' : 'Save Recipe'}
-                  </button>
-                ) : (
-                  <button type="button" className="save-button" onClick={handleSignIn}>
-                    Sign in to save
-                  </button>
-                )}
-                {saveStatus === 'error' && <p className="error-message">Could not save — please try again.</p>}
-              </div>
-            ) : status === 'done' && recipes.length > 0 ? (
-              <div className="recipe-options">
-                {recipes.map((option, index) => (
-                  <button
-                    type="button"
-                    key={option.title}
-                    className="recipe-option"
-                    onClick={() => selectGeneratedRecipe(index)}
-                  >
-                    <span className="recipe-option-title">{option.title}</span>
-                    <span className="recipe-option-summary">{option.summary}</span>
-                    <RecipeMeta recipe={option} />
-                    {(option.tags ?? []).length > 0 && (
-                      <div className="tag-pills">
-                        {(option.tags ?? []).map((tag) => (
-                          <span key={tag} className="tag-pill">
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </button>
-                ))}
-              </div>
-            ) : status === 'error' ? (
-              <p className="error-message">Something went wrong — please try again.</p>
-            ) : (
-              <p>Your recipe will appear here.</p>
-            )}
+                  {user ? (
+                    <button
+                      type="button"
+                      className="save-button"
+                      disabled={saveStatus === 'saving' || saveStatus === 'saved'}
+                      onClick={() => handleSaveRecipe(currentRecipe)}
+                    >
+                      {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Saved!' : 'Save Recipe'}
+                    </button>
+                  ) : (
+                    <button type="button" className="save-button" onClick={handleSignIn}>
+                      Sign in to save
+                    </button>
+                  )}
+                  {saveStatus === 'error' && <p className="error-message">Could not save — please try again.</p>}
+                </motion.div>
+              ) : displayStatus === 'done' && recipes.length > 0 ? (
+                <motion.div
+                  key="options"
+                  className="recipe-options recipe-options-motion"
+                  variants={cardListVariants}
+                  initial="hidden"
+                  animate="show"
+                >
+                  {recipes.map((option, index) => (
+                    <motion.button
+                      type="button"
+                      key={option.title}
+                      className="recipe-option"
+                      variants={cardVariants}
+                      whileHover={{ y: -3, rotate: -0.3 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => selectGeneratedRecipe(index)}
+                    >
+                      <span className="recipe-option-title">{option.title}</span>
+                      <span className="recipe-option-summary">{option.summary}</span>
+                      <RecipeMeta recipe={option} />
+                      {(option.tags ?? []).length > 0 && (
+                        <div className="tag-pills">
+                          {(option.tags ?? []).map((tag) => (
+                            <span key={tag} className="tag-pill">
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </motion.button>
+                  ))}
+                </motion.div>
+              ) : displayStatus === 'error' ? (
+                <p key="error" className="error-message">
+                  Something went wrong — please try again.
+                </p>
+              ) : (
+                <p key="idle">Your recipe will appear here.</p>
+              )}
+            </AnimatePresence>
           </div>
         </>
       ) : (
@@ -1217,6 +1528,7 @@ function App() {
         </div>
       )}
     </section>
+    </MotionConfig>
   )
 }
 
