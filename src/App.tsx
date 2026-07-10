@@ -20,10 +20,38 @@ const RECIPE_TAGS = [
 ]
 
 const DIFFICULTIES = ['Easy', 'Medium', 'Hard']
-const TIME_PRESETS = [15, 30, 45, 60]
 
 const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif']
 const MAX_IMAGE_SIZE = 8 * 1024 * 1024
+
+const MAX_COOK_TIME_OPTIONS = [
+  { value: 'any', label: 'Any' },
+  { value: '15', label: '15 min' },
+  { value: '30', label: '30 min' },
+  { value: '45', label: '45 min' },
+  { value: '60', label: '60 min' },
+]
+
+const MEAL_TYPES = ['Any', 'Breakfast', 'Lunch', 'Dinner', 'Snack', 'Dessert']
+
+const CUISINES = [
+  'Any',
+  'Italian',
+  'Mexican',
+  'Indian',
+  'Chinese',
+  'Japanese',
+  'Korean',
+  'Thai',
+  'Mediterranean',
+  'American',
+]
+
+const MISSING_INGREDIENT_OPTIONS = [
+  { value: 'only', label: 'Use only my ingredients' },
+  { value: 'up-to-2', label: 'Allow up to 2 extra ingredients' },
+  { value: 'any', label: 'Any' },
+]
 
 type Status = 'idle' | 'loading' | 'done' | 'error'
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
@@ -337,8 +365,10 @@ function App() {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
   const [adjustedServings, setAdjustedServings] = useState<number | null>(null)
-  const [maxCookTimeEnabled, setMaxCookTimeEnabled] = useState(false)
-  const [maxCookTime, setMaxCookTime] = useState(30)
+  const [preferredMaxCookTime, setPreferredMaxCookTime] = useState('any')
+  const [preferredMealType, setPreferredMealType] = useState('Any')
+  const [preferredCuisine, setPreferredCuisine] = useState('Any')
+  const [preferredMissingIngredients, setPreferredMissingIngredients] = useState('any')
   const [scanStatus, setScanStatus] = useState<ScanStatus>('idle')
   const [scannedIngredients, setScannedIngredients] = useState<string[]>([])
   const [scanErrorMessage, setScanErrorMessage] = useState('')
@@ -488,7 +518,6 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ingredients: ingredientList,
-          ...(maxCookTimeEnabled ? { maxCookTime } : {}),
         }),
         signal: controller.signal,
       })
@@ -761,36 +790,80 @@ function App() {
             )}
           </div>
 
-          <div className="time-filter">
-            <button
-              type="button"
-              role="switch"
-              aria-checked={maxCookTimeEnabled}
-              className="toggle-row"
-              onClick={() => setMaxCookTimeEnabled((current) => !current)}
-            >
-              <span className={maxCookTimeEnabled ? 'toggle-switch toggle-switch-on' : 'toggle-switch'}>
-                <span className="toggle-knob" />
-              </span>
-              <span className="toggle-label">
-                {maxCookTimeEnabled ? `Cook in under ${maxCookTime} min` : 'Cook in under X minutes'}
-              </span>
-            </button>
+          <div className="preferences-card">
+            <h2>Recipe Preferences (Optional)</h2>
 
-            {maxCookTimeEnabled && (
-              <div className="time-presets">
-                {TIME_PRESETS.map((minutes) => (
-                  <button
-                    type="button"
-                    key={minutes}
-                    className={maxCookTime === minutes ? 'serving-preset serving-preset-active' : 'serving-preset'}
-                    onClick={() => setMaxCookTime(minutes)}
-                  >
-                    {minutes}
-                  </button>
+            <div className="preference-row">
+              <label htmlFor="pref-cook-time" className="preference-label">
+                ⏱ Max Cook Time
+              </label>
+              <select
+                id="pref-cook-time"
+                className="preference-select"
+                value={preferredMaxCookTime}
+                onChange={(e) => setPreferredMaxCookTime(e.target.value)}
+              >
+                {MAX_COOK_TIME_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
                 ))}
-              </div>
-            )}
+              </select>
+            </div>
+
+            <div className="preference-row">
+              <label htmlFor="pref-meal-type" className="preference-label">
+                🍳 Meal Type
+              </label>
+              <select
+                id="pref-meal-type"
+                className="preference-select"
+                value={preferredMealType}
+                onChange={(e) => setPreferredMealType(e.target.value)}
+              >
+                {MEAL_TYPES.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="preference-row">
+              <label htmlFor="pref-cuisine" className="preference-label">
+                🌎 Cuisine (Optional)
+              </label>
+              <select
+                id="pref-cuisine"
+                className="preference-select"
+                value={preferredCuisine}
+                onChange={(e) => setPreferredCuisine(e.target.value)}
+              >
+                {CUISINES.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="preference-row">
+              <label htmlFor="pref-missing-ingredients" className="preference-label">
+                🛒 Missing Ingredients
+              </label>
+              <select
+                id="pref-missing-ingredients"
+                className="preference-select"
+                value={preferredMissingIngredients}
+                onChange={(e) => setPreferredMissingIngredients(e.target.value)}
+              >
+                {MISSING_INGREDIENT_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <button
