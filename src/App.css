@@ -609,6 +609,9 @@
 
   h2 {
     margin: 0;
+    font-family: var(--sans);
+    font-weight: 800;
+    font-size: 20px;
   }
 }
 
@@ -740,8 +743,8 @@
   text-align: left;
 
   h3 {
-    font-family: var(--display);
-    font-weight: 600;
+    font-family: var(--sans);
+    font-weight: 800;
     margin: 0 0 8px;
     font-size: 20px;
     color: var(--text-h);
@@ -948,8 +951,8 @@
 }
 
 .recipe-option-title {
-  font-family: var(--display);
-  font-weight: 600;
+  font-family: var(--sans);
+  font-weight: 700;
   font-size: 16px;
 }
 

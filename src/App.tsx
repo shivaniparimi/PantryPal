@@ -1084,7 +1084,7 @@ function App() {
           </div>
 
           <div className="preferences-card">
-            <h2>Recipe Preferences (Optional)</h2>
+            <h2>Recipe Preferences </h2>
 
             <div className="preference-row">
               <label htmlFor="pref-cook-time" className="preference-label">
