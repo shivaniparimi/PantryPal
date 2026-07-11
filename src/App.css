@@ -1442,3 +1442,277 @@
     }
   }
 }
+
+.ask-chef-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font: inherit;
+  font-weight: 700;
+  color: var(--basil);
+  background: var(--basil-bg);
+  border: 2px solid var(--basil);
+  border-radius: 999px;
+  padding: 8px 18px;
+  margin-top: 16px;
+  cursor: pointer;
+  transition: transform 0.15s;
+
+  &:hover {
+    transform: translateY(-2px);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--basil);
+    outline-offset: 2px;
+  }
+}
+
+.recipe-card-actions .ask-chef-button {
+  margin-top: 0;
+}
+
+.ask-chef-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 100;
+  box-sizing: border-box;
+}
+
+.ask-chef-modal {
+  width: 100%;
+  max-width: 460px;
+  max-height: 82vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--card-bg);
+  border: 2px solid var(--border);
+  border-radius: 20px;
+  box-shadow: var(--shadow);
+  padding: 20px;
+  box-sizing: border-box;
+  text-align: left;
+}
+
+.ask-chef-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+
+  h3 {
+    margin: 0;
+  }
+}
+
+.ask-chef-subtitle {
+  font-size: 14px;
+  color: var(--text);
+  margin-top: 4px;
+}
+
+.ask-chef-close {
+  font-size: 22px;
+  line-height: 1;
+  color: var(--text);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 50%;
+  transition: background-color 0.15s;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.08);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+}
+
+.ask-chef-messages {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 16px 0;
+  padding-right: 4px;
+}
+
+.chat-message {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  max-width: 85%;
+}
+
+.chat-message-user {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+
+.chat-message-chef {
+  align-self: flex-start;
+}
+
+.chat-avatar {
+  flex-shrink: 0;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.chat-bubble {
+  font-size: 14px;
+  line-height: 145%;
+  padding: 10px 14px;
+  border-radius: 16px;
+  white-space: pre-wrap;
+}
+
+.chat-message-user .chat-bubble {
+  color: var(--accent);
+  background: var(--accent-bg);
+  border: 2px solid var(--accent-border);
+  border-bottom-right-radius: 4px;
+}
+
+.chat-message-chef .chat-bubble {
+  color: var(--text-h);
+  background: var(--bg);
+  border: 2px solid var(--border);
+  border-bottom-left-radius: 4px;
+}
+
+.typing-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 14px;
+}
+
+.typing-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text);
+  opacity: 0.5;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .chat-avatar-typing {
+    animation: chef-bounce 1s ease-in-out infinite;
+  }
+  .typing-dot:nth-child(1) {
+    animation: typing-bounce 1.1s ease-in-out infinite;
+  }
+  .typing-dot:nth-child(2) {
+    animation: typing-bounce 1.1s ease-in-out infinite 0.15s;
+  }
+  .typing-dot:nth-child(3) {
+    animation: typing-bounce 1.1s ease-in-out infinite 0.3s;
+  }
+}
+
+@keyframes chef-bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes typing-bounce {
+  0%, 100% {
+    transform: translateY(0);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+
+.suggested-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.suggested-chip {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--basil);
+  background: var(--basil-bg);
+  border: none;
+  border-radius: 999px;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: transform 0.15s;
+
+  &:hover {
+    transform: translateY(-1px);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--basil);
+    outline-offset: 2px;
+  }
+}
+
+.ask-chef-input-row {
+  display: flex;
+  gap: 8px;
+}
+
+.ask-chef-input {
+  flex: 1;
+  font: inherit;
+  color: var(--text-h);
+  background: var(--bg);
+  border: 2px solid var(--border);
+  border-radius: 999px;
+  padding: 10px 16px;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+
+  &:focus-visible {
+    outline: none;
+    border-color: var(--accent);
+  }
+}
+
+.ask-chef-send {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font: inherit;
+  font-weight: 700;
+  color: #fff;
+  background: var(--accent);
+  border: none;
+  border-radius: 999px;
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: transform 0.15s, opacity 0.15s;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+}

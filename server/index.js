@@ -236,6 +236,66 @@ Return only JSON in this exact shape:
   return result.ingredients
 }
 
+const ASK_CHEF_HISTORY_LIMIT = 20
+const ASK_CHEF_QUESTION_MAX_LENGTH = 1000
+
+function buildAskChefSystemPrompt(recipe) {
+  const ingredientList = recipe.ingredients.map((item) => `- ${item}`).join('\n')
+  const stepList = recipe.steps.map((step, index) => `${index + 1}. ${step}`).join('\n')
+  const tagList = Array.isArray(recipe.tags) && recipe.tags.length > 0 ? recipe.tags.join(', ') : 'none'
+
+  return `You are Chef, a friendly, encouraging professional chef helping a home cook with ONE specific recipe.
+
+Recipe you are discussing:
+Title: ${recipe.title}
+Summary: ${recipe.summary || 'none'}
+Servings: ${recipe.servings || 'unknown'}
+Cook time: ${recipe.cookTime || 'unknown'}
+Difficulty: ${recipe.difficulty || 'unknown'}
+Tags: ${tagList}
+Ingredients:
+${ingredientList}
+Steps:
+${stepList}
+
+Rules:
+- Only answer questions related to this recipe: substitutions, technique, scaling, fixing mistakes, adapting for equipment/diet/spice level, pairing/sides, and beginner cooking questions about it.
+- Assume every question is about this recipe unless the user clearly says otherwise.
+- If asked something entirely unrelated to cooking or this recipe (e.g. general trivia, coding, current events), politely redirect back to the recipe — you are not a general-purpose assistant.
+- Be warm, concise, and practical. Use short paragraphs or a brief list when helpful, not long essays.
+- Never say you don't know the recipe — you already have it above.`
+}
+
+async function askChef(recipe, history, question) {
+  if (!ai) throw new Error('GEMINI_API_KEY is not set')
+
+  const contents = [
+    ...history.map((message) => ({
+      role: message.role === 'chef' ? 'model' : 'user',
+      parts: [{ text: message.content }],
+    })),
+    { role: 'user', parts: [{ text: question }] },
+  ]
+
+  const response = await withGeminiRetry(() =>
+    ai.models.generateContent({
+      model: MODEL,
+      contents,
+      config: {
+        systemInstruction: buildAskChefSystemPrompt(recipe),
+      },
+    }),
+  )
+
+  const reply = response.text?.trim()
+
+  if (!reply) {
+    throw new Error('Gemini returned an empty Ask Chef response')
+  }
+
+  return reply
+}
+
 app.use(cors({ origin: process.env.ALLOWED_ORIGIN || '*' }))
 
 // Each route below applies its own express.json() rather than one global
@@ -293,6 +353,41 @@ app.post('/api/scan-fridge', imageBodyParser, async (req, res) => {
   } catch (err) {
     console.error('Gemini fridge scan failed:', err.message)
     res.status(502).json({ error: 'Could not analyze image' })
+  }
+})
+
+app.post('/api/recipe/ask-chef', jsonBody, async (req, res) => {
+  const { recipe, question, history } = req.body
+
+  if (
+    !recipe ||
+    typeof recipe.title !== 'string' ||
+    !Array.isArray(recipe.ingredients) ||
+    recipe.ingredients.length === 0 ||
+    !Array.isArray(recipe.steps) ||
+    recipe.steps.length === 0
+  ) {
+    return res.status(400).json({ error: 'recipe with title, ingredients, and steps is required' })
+  }
+
+  if (typeof question !== 'string' || question.trim().length === 0) {
+    return res.status(400).json({ error: 'question is required' })
+  }
+
+  const trimmedQuestion = question.trim().slice(0, ASK_CHEF_QUESTION_MAX_LENGTH)
+
+  const safeHistory = Array.isArray(history)
+    ? history
+        .filter((message) => message && typeof message.content === 'string')
+        .slice(-ASK_CHEF_HISTORY_LIMIT)
+    : []
+
+  try {
+    const reply = await askChef(recipe, safeHistory, trimmedQuestion)
+    res.json({ reply })
+  } catch (err) {
+    console.error('Ask Chef failed:', err.message)
+    res.status(502).json({ error: 'Chef could not respond' })
   }
 })
 

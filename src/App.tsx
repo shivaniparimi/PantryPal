@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion, MotionConfig, type Variants } from 'motion/react'
 import { GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut, type User } from 'firebase/auth'
 import { auth } from './firebase'
+import { AskChefButton, AskChefModal } from './AskChef'
 import './App.css'
 
-const API_URL = import.meta.env.VITE_API_URL ?? ''
+export const API_URL = import.meta.env.VITE_API_URL ?? ''
 
 const RECIPE_TAGS = [
   'breakfast',
@@ -358,7 +359,7 @@ type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 type ScanStatus = 'idle' | 'scanning' | 'reviewing' | 'error'
 type Tab = 'generate' | 'saved'
 
-type RecipeOption = {
+export type RecipeOption = {
   title: string
   summary: string
   ingredients: string[]
@@ -663,6 +664,7 @@ function App() {
   const [status, setStatus] = useState<Status>('idle')
   const [recipes, setRecipes] = useState<RecipeOption[]>([])
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
+  const [askChefRecipe, setAskChefRecipe] = useState<RecipeOption | null>(null)
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
   const [adjustedServings, setAdjustedServings] = useState<number | null>(null)
   const [preferredMaxCookTime, setPreferredMaxCookTime] = useState('any')
@@ -1259,6 +1261,16 @@ function App() {
                     ))}
                   </ol>
 
+                  <AskChefButton
+                    onClick={() =>
+                      setAskChefRecipe({
+                        ...currentRecipe,
+                        servings: formatServingsLabel(currentRecipe.servings || 'servings', currentServings),
+                        ingredients: currentDisplayIngredients,
+                      })
+                    }
+                  />
+
                   {user ? (
                     <button
                       type="button"
@@ -1474,6 +1486,15 @@ function App() {
                     >
                       {deleteStatus === 'deleting' ? 'Deleting...' : 'Delete'}
                     </button>
+                    <AskChefButton
+                      onClick={() =>
+                        setAskChefRecipe({
+                          ...selectedSavedRecipe,
+                          servings: formatServingsLabel(selectedSavedRecipe.servings || 'servings', savedActiveServings),
+                          ingredients: savedDisplayIngredients,
+                        })
+                      }
+                    />
                   </div>
                   {deleteStatus === 'error' && (
                     <p className="error-message">Could not delete — please try again.</p>
@@ -1543,6 +1564,7 @@ function App() {
         </div>
       )}
     </section>
+    <AskChefModal recipe={askChefRecipe} open={askChefRecipe !== null} onClose={() => setAskChefRecipe(null)} />
     </MotionConfig>
   )
 }
