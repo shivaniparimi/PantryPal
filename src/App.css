@@ -369,23 +369,6 @@
   transform-box: fill-box;
 }
 
-.flying-chip-layer {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding-top: 20%;
-  pointer-events: none;
-}
-
-.flying-emoji {
-  position: absolute;
-  font-size: 24px;
-  line-height: 1;
-  will-change: transform, opacity;
-}
-
 .cooking-caption {
   font-size: 14px;
   font-weight: 700;
